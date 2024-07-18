@@ -87,7 +87,7 @@
     <div id="map"></div>
 
     <script>
-        let map, currentPosition;
+        let map, currentPosition, currentPositionCircle;
         let emotionLogs = JSON.parse(localStorage.getItem('emotionLogs')) || [];
         let selectedFeeling = null;
         let capturedPhoto = null;
@@ -115,7 +115,15 @@
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(function(position) {
                     currentPosition = [position.coords.latitude, position.coords.longitude];
-                    map.setView(currentPosition, 13);
+                    map.setView(currentPosition, 20); // High zoom level to cover a small area
+
+                    // Add a circle to show the 5 meter radius
+                    currentPositionCircle = L.circle(currentPosition, {
+                        color: 'blue',
+                        fillColor: '#30f',
+                        fillOpacity: 0.2,
+                        radius: 5 // 5 meters radius
+                    }).addTo(map);
                 }, function(error) {
                     console.error("Error: " + error.message);
                 });
