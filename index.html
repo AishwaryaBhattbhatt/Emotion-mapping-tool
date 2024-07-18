@@ -3,168 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emotional Mapping Tool</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <title>Emotion Mapping Tool</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
     <style>
-        #map {
-            height: 80vh;
-            width: 100%;
-        }
-        #input-form {
-            margin: 20px;
-        }
+        #map { height: 400px; }
+        #form { margin-top: 20px; }
         .feeling-tag {
             display: inline-block;
+            padding: 5px 10px;
             margin: 5px;
-            padding: 10px;
             border: 1px solid #ccc;
-            border-radius: 5px;
+            border-radius: 20px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
         .feeling-tag.selected {
-            background-color: #ddd;
+            background-color: #007bff;
+            color: white;
         }
     </style>
 </head>
 <body>
-    <h1>Emotional Mapping Tool</h1>
     <div id="map"></div>
-    <div id="input-form">
-        <h2>Log Your Feelings</h2>
+    <div id="form">
         <div id="feeling-tags">
-            <div class="feeling-tag" data-feeling="happy">Happy</div>
-            <div class="feeling-tag" data-feeling="curious">Curious</div>
-            <div class="feeling-tag" data-feeling="excited">Excited</div>
-            <div class="feeling-tag" data-feeling="overwhelmed">Overwhelmed</div>
-            <div class="feeling-tag" data-feeling="annoyed">Annoyed</div>
-            <div class="feeling-tag" data-feeling="sad">Sad</div>
+            <span class="feeling-tag" data-feeling="happy">Happy</span>
+            <span class="feeling-tag" data-feeling="curious">Curious</span>
+            <span class="feeling-tag" data-feeling="excited">Excited</span>
+            <span class="feeling-tag" data-feeling="overwhelmed">Overwhelmed</span>
+            <span class="feeling-tag" data-feeling="annoyed">Annoyed</span>
+            <span class="feeling-tag" data-feeling="sad">Sad</span>
         </div>
-        <label for="notes">Notes (optional):</label><br>
-        <textarea id="notes" name="notes" rows="4" cols="50"></textarea><br>
-        <label for="photo">Photo (optional, max 3MB):</label>
-        <input type="file" id="photo" name="photo" accept="image/*"><br>
-        <button type="button" onclick="saveLog()">Save Log</button>
+        <textarea id="notes" placeholder="Enter your notes here"></textarea>
+        <input type="file" id="photo" accept="image/*">
+        <button onclick="saveLog()">Save Log</button>
     </div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        const map = L.map('map').setView([43.6500, -79.3900], 14);
+        let map, marker, currentPosition;
+        let emotionLogs = [];
+        let selectedFeeling = null;
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-        }).addTo(map);
+        function initMap() {
+            map = L.map('map').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
 
-        const bounds = [
-            [43.65239257152418, -79.4006624097942],
-            [43.64484424107835, -79.39790011173959],
-            [43.647341029368114, -79.38632111423954],
-            [43.65500497983337, -79.38908553746576]
-        ];
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    currentPosition = [position.coords.latitude, position.coords.longitude];
+                    map.setView(currentPosition, 13);
+                    marker = L.marker(currentPosition).addTo(map);
+                }, function(error) {
+                    console.error("Error: " + error.message);
+                });
+            } else {
+                console.log("Geolocation is not supported by this browser.");
+            }
 
-        map.fitBounds(bounds);
+            initFeelingTags();
+        }
 
-        let selectedFeeling = '';
-
-        document.querySelectorAll('.feeling-tag').forEach(tag => {
-            tag.addEventListener('click', () => {
-                document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
-                tag.classList.add('selected');
-                selectedFeeling = tag.getAttribute('data-feeling');
+        function initFeelingTags() {
+            const tags = document.querySelectorAll('.feeling-tag');
+            tags.forEach(tag => {
+                tag.addEventListener('click', function() {
+                    tags.forEach(t => t.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedFeeling = this.dataset.feeling;
+                });
             });
-        });
+        }
 
-        function onLocationFound(e) {
-            const radius = e.accuracy / 2;
+        function saveLog() {
+            if (!currentPosition) {
+                alert("Unable to get your current location. Please try again.");
+                return;
+            }
 
-            const userMarker = L.marker(e.latlng).addTo(map)
-                .bindPopup("You are within " + radius + " meters from this point").openPopup();
+            if (!selectedFeeling) {
+                alert("Please select a feeling before saving.");
+                return;
+            }
 
-            L.circle(e.latlng, radius).addTo(map);
-
-            window.saveLog = function() {
-                console.log("Save log button clicked");
-                if (!selectedFeeling) {
-                    alert('Please select a feeling');
-                    return;
-                }
-
-                const notes = document.getElementById('notes').value;
-                const photoInput = document.getElementById('photo');
-                const photoFile = photoInput.files[0];
-                let photoURL = '';
-
-                const lat = e.latlng.lat;
-                const lng = e.latlng.lng;
-
-                console.log("Selected feeling:", selectedFeeling);
-                console.log("Notes:", notes);
-                console.log("Photo file:", photoFile);
-
-                if (photoFile) {
-                    if (photoFile.size > 3145728) { // Check if file is larger than 3MB
-                        alert('The photo size exceeds the 3MB limit. Please choose a smaller file.');
-                        return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        photoURL = event.target.result;
-                        console.log("Photo URL:", photoURL);
-                        saveLogToStorage(lat, lng, selectedFeeling, notes, photoURL);
-                        addMarker(lat, lng, selectedFeeling, notes, photoURL);
-                    };
-                    reader.readAsDataURL(photoFile);
-                } else {
-                    saveLogToStorage(lat, lng, selectedFeeling, notes, '');
-                    addMarker(lat, lng, selectedFeeling, notes, '');
-                }
-            };
-
-            function saveLogToStorage(lat, lng, feeling, notes, photo) {
+            const notes = document.getElementById('notes').value;
+            const photoInput = document.getElementById('photo');
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
                 const log = {
-                    latitude: lat,
-                    longitude: lng,
-                    feeling,
-                    notes,
-                    photo,
-                    timestamp: new Date().toISOString()
+                    position: currentPosition,
+                    feeling: selectedFeeling,
+                    notes: notes,
+                    photo: event.target.result
                 };
 
-                console.log("Saving log to storage:", log);
-                localStorage.setItem(`log_${lat}_${lng}_${log.timestamp}`, JSON.stringify(log));
-                alert('Log saved!');
-            }
+                emotionLogs.push(log);
+                addLogToMap(log);
+                
+                document.getElementById('notes').value = '';
+                photoInput.value = '';
+                document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
+                selectedFeeling = null;
+            };
 
-            function addMarker(lat, lng, feeling, notes, photo) {
-                console.log("Adding marker to map:", lat, lng, feeling, notes, photo);
-                const marker = L.marker([lat, lng]).addTo(map)
-                    .bindPopup(`<b>${feeling}</b><br>${notes}<br>${photo ? '<img src="' + photo + '" width="100px"/>' : ''}<br><small>${new Date().toISOString()}</small>`)
-                    .openPopup();
-            }
-        }
-
-        function onLocationError(e) {
-            alert(e.message);
-        }
-
-        map.on('locationfound', onLocationFound);
-        map.on('locationerror', onLocationError);
-
-        map.locate({setView: true, maxZoom: 16});
-
-        function loadLogs() {
-            console.log("Loading logs from storage");
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('log_')) {
-                    const log = JSON.parse(localStorage.getItem(key));
-                    console.log("Loaded log:", log);
-                    const marker = L.marker([log.latitude, log.longitude]).addTo(map)
-                        .bindPopup(`<b>${log.feeling}</b><br>${log.notes}<br>${log.photo ? '<img src="' + log.photo + '" width="100px"/>' : ''}<br><small>${log.timestamp}</small>`);
-                }
+            if (photoInput.files[0]) {
+                reader.readAsDataURL(photoInput.files[0]);
+            } else {
+                reader.onload({target: {result: null}});
             }
         }
 
-        window.onload = loadLogs;
+        function addLogToMap(log) {
+            const popupContent = `
+                <strong>Feeling:</strong> ${log.feeling}<br>
+                <strong>Notes:</strong> ${log.notes}<br>
+                ${log.photo ? `<img src="${log.photo}" alt="Uploaded photo" style="max-width: 100px; max-height: 100px;">` : ''}
+            `;
+            L.marker(log.position).addTo(map).bindPopup(popupContent);
+        }
+
+        window.onload = initMap;
     </script>
 </body>
 </html>
