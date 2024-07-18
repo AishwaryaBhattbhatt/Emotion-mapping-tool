@@ -11,15 +11,16 @@
         #form { margin-top: 20px; }
         .feeling-tag {
             display: inline-block;
-            padding: 5px 10px;
+            padding: 10px 15px;
             margin: 5px;
-            border: 1px solid #ccc;
-            border-radius: 20px;
+            border: 2px solid #ccc;
+            border-radius: 25px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: all 0.3s;
+            font-size: 18px;
         }
         .feeling-tag.selected {
-            color: black;
+            transform: scale(1.1);
         }
         #save-confirmation {
             display: none;
@@ -28,12 +29,22 @@
         }
         .field-title {
             font-weight: bold;
-            margin-top: 10px;
+            margin-top: 15px;
+            margin-bottom: 5px;
         }
-        #capturedPhoto {
-            max-width: 200px;
-            max-height: 200px;
-            display: none;
+        #notes {
+            width: 100%;
+            height: 100px;
+        }
+        #camera-feed {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            background-color: #f0f0f0;
+            margin-bottom: 10px;
+        }
+        #capture-photo {
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -45,17 +56,16 @@
             <span class="feeling-tag" data-feeling="excited" style="background-color: #b2fe92;">😃 Excited</span>
             <span class="feeling-tag" data-feeling="curious" style="background-color: #aaffdd;">🤔 Curious</span>
             <span class="feeling-tag" data-feeling="happy" style="background-color: #ecfa6f;">😊 Happy</span>
-            <span class="feeling-tag" data-feeling="overwhelmed" style="background-color: #fa9c9c;">😰 Overwhelmed</span>
+            <span class="feeling-tag" data-feeling="overwhelmed" style="background-color: #fa9c9c;">😵 Overwhelmed</span>
             <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
             <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
         </div>
         <div class="field-title">Notes:</div>
         <textarea id="notes" placeholder="Enter your notes here"></textarea>
         <div class="field-title">Photo:</div>
-        <button id="capturePhotoBtn">Capture Photo</button>
-        <video id="video" style="display:none;"></video>
-        <canvas id="canvas" style="display:none;"></canvas>
-        <img id="capturedPhoto" alt="Captured photo">
+        <video id="camera-feed" autoplay playsinline></video>
+        <button id="capture-photo">Capture Photo</button>
+        <canvas id="photo-canvas" style="display:none;"></canvas>
         <button onclick="saveLog()">Save Log</button>
         <div id="save-confirmation">Log saved and marker added to the map!</div>
     </div>
@@ -64,7 +74,16 @@
         let map, currentPositionMarker, currentPosition;
         let emotionLogs = [];
         let selectedFeeling = null;
-        let capturedImage = null;
+        let capturedPhoto = null;
+
+        const feelingColors = {
+            excited: '#b2fe92',
+            curious: '#aaffdd',
+            happy: '#ecfa6f',
+            overwhelmed: '#fa9c9c',
+            annoyed: '#dd8afe',
+            sad: '#a4c0ff'
+        };
 
         function initMap() {
             map = L.map('map').setView([0, 0], 2);
@@ -86,7 +105,7 @@
             }
 
             initFeelingTags();
-            initCameraCapture();
+            initCamera();
         }
 
         function initFeelingTags() {
@@ -100,28 +119,23 @@
             });
         }
 
-        function initCameraCapture() {
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const capturePhotoBtn = document.getElementById('capturePhotoBtn');
-            const capturedPhoto = document.getElementById('capturedPhoto');
-
-            navigator.mediaDevices.getUserMedia({ video: true })
+        function initCamera() {
+            const video = document.getElementById('camera-feed');
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
                     video.srcObject = stream;
-                    video.play();
                 })
-                .catch(err => {
-                    console.error("Error accessing the camera", err);
+                .catch(error => {
+                    console.error("Error accessing the camera:", error);
                 });
 
-            capturePhotoBtn.addEventListener('click', function() {
+            document.getElementById('capture-photo').addEventListener('click', function() {
+                const canvas = document.getElementById('photo-canvas');
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
-                capturedImage = canvas.toDataURL('image/jpeg');
-                capturedPhoto.src = capturedImage;
-                capturedPhoto.style.display = 'block';
+                capturedPhoto = canvas.toDataURL('image/jpeg');
+                alert("Photo captured!");
             });
         }
 
@@ -142,7 +156,7 @@
                 position: currentPosition,
                 feeling: selectedFeeling,
                 notes: notes,
-                photo: capturedImage
+                photo: capturedPhoto
             };
 
             emotionLogs.push(log);
@@ -151,10 +165,8 @@
             document.getElementById('notes').value = '';
             document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
             selectedFeeling = null;
-            capturedImage = null;
-            document.getElementById('capturedPhoto').style.display = 'none';
+            capturedPhoto = null;
 
-            // Show save confirmation
             const saveConfirmation = document.getElementById('save-confirmation');
             saveConfirmation.style.display = 'block';
             setTimeout(() => {
@@ -164,15 +176,16 @@
 
         function addLogToMap(log) {
             const popupContent = `
-                <strong>Feeling:</strong> ${getEmoticonForFeeling(log.feeling)} ${log.feeling}<br>
-                <strong>Notes:</strong> ${log.notes}<br>
-                ${log.photo ? `<strong>Photo:</strong><br><img src="${log.photo}" alt="Captured photo" style="max-width: 100px; max-height: 100px;">` : ''}
+                <div style="background-color: ${feelingColors[log.feeling]}; padding: 10px; border-radius: 5px;">
+                    <strong>Feeling:</strong> ${log.feeling}<br>
+                    <strong>Notes:</strong> ${log.notes}<br>
+                    ${log.photo ? `<img src="${log.photo}" alt="Captured photo" style="max-width: 100px; max-height: 100px;">` : ''}
+                </div>
             `;
 
-            const markerColor = getMarkerColor(log.feeling);
             const markerIcon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div style='background-color:${markerColor};' class='marker-pin'>${getEmoticonForFeeling(log.feeling)}</div>`,
+                html: `<div style='background-color:${feelingColors[log.feeling]};' class='marker-pin'></div>`,
                 iconSize: [30, 42],
                 iconAnchor: [15, 42]
             });
@@ -180,30 +193,6 @@
             L.marker(log.position, {icon: markerIcon}).addTo(map)
                 .bindPopup(popupContent)
                 .openPopup();
-        }
-
-        function getMarkerColor(feeling) {
-            const colors = {
-                excited: '#b2fe92',
-                curious: '#aaffdd',
-                happy: '#ecfa6f',
-                overwhelmed: '#fa9c9c',
-                annoyed: '#dd8afe',
-                sad: '#a4c0ff'
-            };
-            return colors[feeling] || '#000000'; // Default to black if feeling not found
-        }
-
-        function getEmoticonForFeeling(feeling) {
-            const emoticons = {
-                excited: '😃',
-                curious: '🤔',
-                happy: '😊',
-                overwhelmed: '😰',
-                annoyed: '😠',
-                sad: '😢'
-            };
-            return emoticons[feeling] || '';
         }
 
         window.onload = initMap;
