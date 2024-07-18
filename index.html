@@ -47,7 +47,7 @@
     </div>
 
     <script>
-        let map, marker, currentPosition;
+        let map, currentPositionMarker, currentPosition;
         let emotionLogs = [];
         let selectedFeeling = null;
 
@@ -61,7 +61,8 @@
                 navigator.geolocation.getCurrentPosition(function(position) {
                     currentPosition = [position.coords.latitude, position.coords.longitude];
                     map.setView(currentPosition, 13);
-                    marker = L.marker(currentPosition).addTo(map);
+                    currentPositionMarker = L.marker(currentPosition).addTo(map);
+                    currentPositionMarker.bindPopup("Your current location").openPopup();
                 }, function(error) {
                     console.error("Error: " + error.message);
                 });
@@ -135,7 +136,30 @@
                 <strong>Notes:</strong> ${log.notes}<br>
                 ${log.photo ? `<img src="${log.photo}" alt="Uploaded photo" style="max-width: 100px; max-height: 100px;">` : ''}
             `;
-            L.marker(log.position).addTo(map).bindPopup(popupContent);
+
+            const markerColor = getMarkerColor(log.feeling);
+            const markerIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style='background-color:${markerColor};' class='marker-pin'></div>`,
+                iconSize: [30, 42],
+                iconAnchor: [15, 42]
+            });
+
+            L.marker(log.position, {icon: markerIcon}).addTo(map)
+                .bindPopup(popupContent)
+                .openPopup();
+        }
+
+        function getMarkerColor(feeling) {
+            const colors = {
+                happy: '#FFD700',    // Gold
+                curious: '#4B0082',  // Indigo
+                excited: '#FF4500',  // OrangeRed
+                overwhelmed: '#800080', // Purple
+                annoyed: '#FF6347',  // Tomato
+                sad: '#4682B4'       // SteelBlue
+            };
+            return colors[feeling] || '#000000'; // Default to black if feeling not found
         }
 
         window.onload = initMap;
