@@ -82,6 +82,7 @@
             L.circle(e.latlng, radius).addTo(map);
 
             window.saveLog = function() {
+                console.log("Save log button clicked");
                 if (!selectedFeeling) {
                     alert('Please select a feeling');
                     return;
@@ -95,10 +96,15 @@
                 const lat = e.latlng.lat;
                 const lng = e.latlng.lng;
 
+                console.log("Selected feeling:", selectedFeeling);
+                console.log("Notes:", notes);
+                console.log("Photo file:", photoFile);
+
                 if (photoFile) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         photoURL = event.target.result;
+                        console.log("Photo URL:", photoURL);
                         saveLogToStorage(lat, lng, selectedFeeling, notes, photoURL);
                         addMarker(lat, lng, selectedFeeling, notes, photoURL);
                     };
@@ -119,11 +125,13 @@
                     timestamp: new Date().toISOString()
                 };
 
+                console.log("Saving log to storage:", log);
                 localStorage.setItem(`log_${lat}_${lng}_${log.timestamp}`, JSON.stringify(log));
                 alert('Log saved!');
             }
 
             function addMarker(lat, lng, feeling, notes, photo) {
+                console.log("Adding marker to map:", lat, lng, feeling, notes, photo);
                 const marker = L.marker([lat, lng]).addTo(map)
                     .bindPopup(`<b>${feeling}</b><br>${notes}<br>${photo ? '<img src="' + photo + '" width="100px"/>' : ''}<br><small>${new Date().toISOString()}</small>`)
                     .openPopup();
@@ -140,10 +148,12 @@
         map.locate({setView: true, maxZoom: 16});
 
         function loadLogs() {
+            console.log("Loading logs from storage");
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key.startsWith('log_')) {
                     const log = JSON.parse(localStorage.getItem(key));
+                    console.log("Loaded log:", log);
                     const marker = L.marker([log.latitude, log.longitude]).addTo(map)
                         .bindPopup(`<b>${log.feeling}</b><br>${log.notes}<br>${log.photo ? '<img src="' + log.photo + '" width="100px"/>' : ''}<br><small>${log.timestamp}</small>`);
                 }
