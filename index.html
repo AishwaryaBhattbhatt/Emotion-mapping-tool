@@ -22,6 +22,11 @@
             background-color: #007bff;
             color: white;
         }
+        #save-confirmation {
+            display: none;
+            color: green;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -38,6 +43,7 @@
         <textarea id="notes" placeholder="Enter your notes here"></textarea>
         <input type="file" id="photo" accept="image/*">
         <button onclick="saveLog()">Save Log</button>
+        <div id="save-confirmation">Log saved and marker added to the map!</div>
     </div>
 
     <script>
@@ -107,6 +113,13 @@
                 photoInput.value = '';
                 document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
                 selectedFeeling = null;
+
+                // Show save confirmation
+                const saveConfirmation = document.getElementById('save-confirmation');
+                saveConfirmation.style.display = 'block';
+                setTimeout(() => {
+                    saveConfirmation.style.display = 'none';
+                }, 3000);
             };
 
             if (photoInput.files[0]) {
