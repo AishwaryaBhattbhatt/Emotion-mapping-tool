@@ -81,37 +81,53 @@
 
             L.circle(e.latlng, radius).addTo(map);
 
-            document.getElementById('log-form').onsubmit = function(event) {
-                event.preventDefault();
-
+            // Save log function directly tied to button click
+            window.saveLog = function() {
                 if (!selectedFeeling) {
                     alert('Please select a feeling');
                     return;
                 }
 
                 const notes = document.getElementById('notes').value;
-                const photo = document.getElementById('photo').files[0];
-                
+                const photoInput = document.getElementById('photo');
+                const photoFile = photoInput.files[0];
+                let photoURL = '';
+
+                if (photoFile) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        photoURL = event.target.result;
+                        saveLogToStorage(e.latlng.lat, e.latlng.lng, selectedFeeling, notes, photoURL);
+                        addMarker(e.latlng.lat, e.latlng.lng, selectedFeeling, notes, photoURL);
+                    };
+                    reader.readAsDataURL(photoFile);
+                } else {
+                    saveLogToStorage(e.latlng.lat, e.latlng.lng, selectedFeeling, notes, '');
+                    addMarker(e.latlng.lat, e.latlng.lng, selectedFeeling, notes, '');
+                }
+            };
+
+            // Helper function to save log to local storage
+            function saveLogToStorage(lat, lng, feeling, notes, photo) {
                 const log = {
-                    latitude: e.latlng.lat,
-                    longitude: e.latlng.lng,
-                    feeling: selectedFeeling,
+                    latitude: lat,
+                    longitude: lng,
+                    feeling,
                     notes,
-                    photo: photo ? URL.createObjectURL(photo) : '',
+                    photo,
                     timestamp: new Date().toISOString()
                 };
 
-                localStorage.setItem(`log_${log.latitude}_${log.longitude}`, JSON.stringify(log));
+                localStorage.setItem(`log_${lat}_${lng}`, JSON.stringify(log));
                 alert('Log saved!');
+            }
 
-                const marker = L.marker([log.latitude, log.longitude]).addTo(map)
-                    .bindPopup(`<b>${log.feeling}</b><br>${log.notes}<br>${log.photo ? '<img src="' + log.photo + '" width="100px"/>' : ''}<br><small>${log.timestamp}</small>`)
+            // Helper function to add marker to the map
+            function addMarker(lat, lng, feeling, notes, photo) {
+                const marker = L.marker([lat, lng]).addTo(map)
+                    .bindPopup(`<b>${feeling}</b><br>${notes}<br>${photo ? '<img src="' + photo + '" width="100px"/>' : ''}<br><small>${new Date().toISOString()}</small>`)
                     .openPopup();
-
-                if (photo) {
-                    URL.revokeObjectURL(log.photo);
-                }
-            };
+            }
         }
 
         function onLocationError(e) {
@@ -130,12 +146,6 @@
                     const log = JSON.parse(localStorage.getItem(key));
                     const marker = L.marker([log.latitude, log.longitude]).addTo(map)
                         .bindPopup(`<b>${log.feeling}</b><br>${log.notes}<br>${log.photo ? '<img src="' + log.photo + '" width="100px"/>' : ''}<br><small>${log.timestamp}</small>`);
-                    marker.on('mouseover', function (e) {
-                        this.openPopup();
-                    });
-                    marker.on('mouseout', function (e) {
-                        this.closePopup();
-                    });
                 }
             }
         }
