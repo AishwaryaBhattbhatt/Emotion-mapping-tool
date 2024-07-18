@@ -13,10 +13,16 @@
         #input-form {
             margin: 20px;
         }
-        .marker-label {
-            background-color: white;
-            padding: 5px;
+        .feeling-tag {
+            display: inline-block;
+            margin: 5px;
+            padding: 10px;
+            border: 1px solid #ccc;
             border-radius: 5px;
+            cursor: pointer;
+        }
+        .feeling-tag.selected {
+            background-color: #ddd;
         }
     </style>
 </head>
@@ -25,22 +31,19 @@
     <div id="map"></div>
     <div id="input-form">
         <h2>Log Your Feelings</h2>
-        <form id="log-form">
-            <label for="feeling">Feeling:</label>
-            <select id="feeling" name="feeling">
-                <option value="happy">Happy</option>
-                <option value="curious">Curious</option>
-                <option value="excited">Excited</option>
-                <option value="overwhelmed">Overwhelmed</option>
-                <option value="annoyed">Annoyed</option>
-                <option value="sad">Sad</option>
-            </select><br>
-            <label for="notes">Notes (optional):</label><br>
-            <textarea id="notes" name="notes" rows="4" cols="50"></textarea><br>
-            <label for="photo">Photo (optional):</label>
-            <input type="file" id="photo" name="photo"><br>
-            <button type="button" onclick="saveLog()">Save Log</button>
-        </form>
+        <div id="feeling-tags">
+            <div class="feeling-tag" data-feeling="happy">Happy</div>
+            <div class="feeling-tag" data-feeling="curious">Curious</div>
+            <div class="feeling-tag" data-feeling="excited">Excited</div>
+            <div class="feeling-tag" data-feeling="overwhelmed">Overwhelmed</div>
+            <div class="feeling-tag" data-feeling="annoyed">Annoyed</div>
+            <div class="feeling-tag" data-feeling="sad">Sad</div>
+        </div>
+        <label for="notes">Notes (optional):</label><br>
+        <textarea id="notes" name="notes" rows="4" cols="50"></textarea><br>
+        <label for="photo">Photo (optional):</label>
+        <input type="file" id="photo" name="photo"><br>
+        <button type="button" onclick="saveLog()">Save Log</button>
     </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -60,6 +63,16 @@
 
         map.fitBounds(bounds);
 
+        let selectedFeeling = '';
+
+        document.querySelectorAll('.feeling-tag').forEach(tag => {
+            tag.addEventListener('click', () => {
+                document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
+                tag.classList.add('selected');
+                selectedFeeling = tag.getAttribute('data-feeling');
+            });
+        });
+
         function onLocationFound(e) {
             const radius = e.accuracy / 2;
 
@@ -71,14 +84,18 @@
             document.getElementById('log-form').onsubmit = function(event) {
                 event.preventDefault();
 
-                const feeling = document.getElementById('feeling').value;
+                if (!selectedFeeling) {
+                    alert('Please select a feeling');
+                    return;
+                }
+
                 const notes = document.getElementById('notes').value;
                 const photo = document.getElementById('photo').files[0];
                 
                 const log = {
                     latitude: e.latlng.lat,
                     longitude: e.latlng.lng,
-                    feeling,
+                    feeling: selectedFeeling,
                     notes,
                     photo: photo ? URL.createObjectURL(photo) : '',
                     timestamp: new Date().toISOString()
@@ -88,8 +105,9 @@
                 alert('Log saved!');
 
                 const marker = L.marker([log.latitude, log.longitude]).addTo(map)
-                    .bindPopup(`<b>${log.feeling}</b><br>${log.notes}<br>${log.photo ? '<img src="' + log.photo + '" width="100px"/>' : ''}<br><small>${log.timestamp}</small>`);
-                
+                    .bindPopup(`<b>${log.feeling}</b><br>${log.notes}<br>${log.photo ? '<img src="' + log.photo + '" width="100px"/>' : ''}<br><small>${log.timestamp}</small>`)
+                    .openPopup();
+
                 if (photo) {
                     URL.revokeObjectURL(log.photo);
                 }
