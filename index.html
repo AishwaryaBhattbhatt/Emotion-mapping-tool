@@ -46,11 +46,29 @@
         #capture-photo {
             margin-bottom: 15px;
         }
+        #save-log {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            font-size: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #save-log:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
-    <div id="map"></div>
     <div id="form">
+        <div class="field-title">Photo:</div>
+        <video id="camera-feed" autoplay playsinline></video>
+        <button id="capture-photo">Capture Photo</button>
+        <canvas id="photo-canvas" style="display:none;"></canvas>
         <div class="field-title">Feeling:</div>
         <div id="feeling-tags">
             <span class="feeling-tag" data-feeling="excited" style="background-color: #b2fe92;">😃 Excited</span>
@@ -62,13 +80,10 @@
         </div>
         <div class="field-title">Notes:</div>
         <textarea id="notes" placeholder="Enter your notes here"></textarea>
-        <div class="field-title">Photo:</div>
-        <video id="camera-feed" autoplay playsinline></video>
-        <button id="capture-photo">Capture Photo</button>
-        <canvas id="photo-canvas" style="display:none;"></canvas>
-        <button onclick="saveLog()">Save Log</button>
+        <button id="save-log" onclick="saveLog()">Save Log</button>
         <div id="save-confirmation">Log saved and marker added to the map!</div>
     </div>
+    <div id="map"></div>
 
     <script>
         let map, currentPositionMarker, currentPosition;
@@ -135,6 +150,7 @@
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
                 capturedPhoto = canvas.toDataURL('image/jpeg');
+                video.srcObject.getTracks().forEach(track => track.stop());
                 alert("Photo captured!");
             });
         }
@@ -151,7 +167,7 @@
             }
 
             const notes = document.getElementById('notes').value;
-            
+
             const log = {
                 position: currentPosition,
                 feeling: selectedFeeling,
@@ -161,7 +177,7 @@
 
             emotionLogs.push(log);
             addLogToMap(log);
-            
+
             document.getElementById('notes').value = '';
             document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
             selectedFeeling = null;
@@ -177,9 +193,9 @@
         function addLogToMap(log) {
             const popupContent = `
                 <div style="background-color: ${feelingColors[log.feeling]}; padding: 10px; border-radius: 5px;">
+                    ${log.photo ? `<img src="${log.photo}" alt="Captured photo" style="max-width: 100px; max-height: 100px;"><br>` : ''}
                     <strong>Feeling:</strong> ${log.feeling}<br>
-                    <strong>Notes:</strong> ${log.notes}<br>
-                    ${log.photo ? `<img src="${log.photo}" alt="Captured photo" style="max-width: 100px; max-height: 100px;">` : ''}
+                    <strong>Notes:</strong> ${log.notes}
                 </div>
             `;
 
