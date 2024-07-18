@@ -41,7 +41,7 @@
         </div>
         <label for="notes">Notes (optional):</label><br>
         <textarea id="notes" name="notes" rows="4" cols="50"></textarea><br>
-        <label for="photo">Photo (optional, max 1MB):</label>
+        <label for="photo">Photo (optional, max 3MB):</label>
         <input type="file" id="photo" name="photo" accept="image/*"><br>
         <button type="button" onclick="saveLog()">Save Log</button>
     </div>
@@ -101,8 +101,8 @@
                 console.log("Photo file:", photoFile);
 
                 if (photoFile) {
-                    if (photoFile.size > 1048576) { // Check if file is larger than 1MB
-                        alert('The photo size exceeds the 1MB limit. Please choose a smaller file.');
+                    if (photoFile.size > 3145728) { // Check if file is larger than 3MB
+                        alert('The photo size exceeds the 3MB limit. Please choose a smaller file.');
                         return;
                     }
                     const reader = new FileReader();
