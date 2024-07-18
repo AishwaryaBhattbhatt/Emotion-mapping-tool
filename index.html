@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotional Mapping Tool</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <style>
+        #map {
+            height: 80vh;
+            width: 100%;
+        }
+        #input-form {
+            margin: 20px;
+        }
+        .marker-label {
+            background-color: white;
+            padding: 5px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Emotional Mapping Tool</h1>
+    <div id="map"></div>
+    <div id="input-form">
+        <h2>Log Your Emotions</h2>
+        <form id="log-form">
+            <label for="latitude">Latitude:</label>
+            <input type="text" id="latitude" name="latitude" readonly><br>
+            <label for="longitude">Longitude:</label>
+            <input type="text" id="longitude" name="longitude" readonly><br>
+            <label for="emotion">Emotion:</label>
+            <input type="text" id="emotion" name="emotion"><br>
+            <label for="notes">Notes:</label><br>
+            <textarea id="notes" name="notes" rows="4" cols="50"></textarea><br>
+            <button type="button" onclick="saveLog()">Save Log</button>
+        </form>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([43.6500, -79.3900], 14);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        const coordinates = [
+            [43.65239257152418, -79.4006624097942],
+            [43.64484424107835, -79.39790011173959],
+            [43.647341029368114, -79.38632111423954],
+            [43.65500497983337, -79.38908553746576]
+        ];
+
+        coordinates.forEach(coord => {
+            const marker = L.marker(coord).addTo(map);
+            marker.on('click', function(e) {
+                document.getElementById('latitude').value = e.latlng.lat;
+                document.getElementById('longitude').value = e.latlng.lng;
+            });
+        });
+
+        function saveLog() {
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+            const emotion = document.getElementById('emotion').value;
+            const notes = document.getElementById('notes').value;
+
+            if (latitude && longitude && emotion && notes) {
+                const log = {
+                    latitude,
+                    longitude,
+                    emotion,
+                    notes,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem(`log_${latitude}_${longitude}`, JSON.stringify(log));
+                alert('Log saved!');
+            } else {
+                alert('Please fill out all fields.');
+            }
+        }
+
+        function loadLogs() {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('log_')) {
+                    const log = JSON.parse(localStorage.getItem(key));
+                    const marker = L.marker([log.latitude, log.longitude]).addTo(map)
+                        .bindPopup(`<b>${log.emotion}</b><br>${log.notes}<br><small>${log.timestamp}</small>`);
+                    marker.on('mouseover', function (e) {
+                        this.openPopup();
+                    });
+                    marker.on('mouseout', function (e) {
+                        this.closePopup();
+                    });
+                }
+            }
+        }
+
+        window.onload = loadLogs;
+    </script>
+</body>
+</html>
