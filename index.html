@@ -115,14 +115,14 @@
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(function(position) {
                     currentPosition = [position.coords.latitude, position.coords.longitude];
-                    map.setView(currentPosition, 13); // Adjust zoom level to show approximately a 10 km radius
+                    map.setView(currentPosition, 18); // High zoom level to cover a small area
 
-                    // Add a circle to show the 5 meter radius
+                    // Add a circle to show the 10 meter radius
                     currentPositionCircle = L.circle(currentPosition, {
                         color: 'blue',
                         fillColor: '#30f',
                         fillOpacity: 0.2,
-                        radius: 5 // 5 meters radius
+                        radius: 10 // 10 meters radius
                     }).addTo(map);
                 }, function(error) {
                     console.error("Error: " + error.message);
