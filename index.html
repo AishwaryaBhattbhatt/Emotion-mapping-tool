@@ -88,7 +88,7 @@
 
     <script>
         let map, currentPosition;
-        let emotionLogs = [];
+        let emotionLogs = JSON.parse(localStorage.getItem('emotionLogs')) || [];
         let selectedFeeling = null;
         let capturedPhoto = null;
         let stream;
@@ -125,6 +125,7 @@
 
             initFeelingTags();
             initCamera();
+            loadLogs();
         }
 
         function initFeelingTags() {
@@ -185,6 +186,7 @@
             };
 
             emotionLogs.push(log);
+            localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
             addLogToMap(log);
 
             document.getElementById('notes').value = '';
@@ -218,6 +220,10 @@
 
             const marker = L.marker([log.position[0] + Math.random() * 0.0001, log.position[1] + Math.random() * 0.0001], {icon: markerIcon}).addTo(map);
             marker.bindPopup(popupContent);
+        }
+
+        function loadLogs() {
+            emotionLogs.forEach(log => addLogToMap(log));
         }
 
         function restartCamera() {
