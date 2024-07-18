@@ -209,13 +209,13 @@
 
             const markerIcon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div style='background-color:${feelingColors[log.feeling]};' class='marker-pin'></div>`,
+                html: `<div style='background-color:${feelingColors[log.feeling]}; width: 24px; height: 24px; border-radius: 50%;'></div>`,
                 iconSize: [30, 42],
                 iconAnchor: [15, 42]
             });
 
             const marker = L.marker([log.position[0] + Math.random() * 0.0001, log.position[1] + Math.random() * 0.0001], {icon: markerIcon}).addTo(map);
-            marker.bindPopup(popupContent).openPopup();
+            marker.bindPopup(popupContent);
         }
 
         function restartCamera() {
