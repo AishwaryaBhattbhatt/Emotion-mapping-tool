@@ -81,7 +81,6 @@
 
             L.circle(e.latlng, radius).addTo(map);
 
-            // Save log function directly tied to button click
             window.saveLog = function() {
                 if (!selectedFeeling) {
                     alert('Please select a feeling');
@@ -93,21 +92,23 @@
                 const photoFile = photoInput.files[0];
                 let photoURL = '';
 
+                const lat = e.latlng.lat;
+                const lng = e.latlng.lng;
+
                 if (photoFile) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         photoURL = event.target.result;
-                        saveLogToStorage(e.latlng.lat, e.latlng.lng, selectedFeeling, notes, photoURL);
-                        addMarker(e.latlng.lat, e.latlng.lng, selectedFeeling, notes, photoURL);
+                        saveLogToStorage(lat, lng, selectedFeeling, notes, photoURL);
+                        addMarker(lat, lng, selectedFeeling, notes, photoURL);
                     };
                     reader.readAsDataURL(photoFile);
                 } else {
-                    saveLogToStorage(e.latlng.lat, e.latlng.lng, selectedFeeling, notes, '');
-                    addMarker(e.latlng.lat, e.latlng.lng, selectedFeeling, notes, '');
+                    saveLogToStorage(lat, lng, selectedFeeling, notes, '');
+                    addMarker(lat, lng, selectedFeeling, notes, '');
                 }
             };
 
-            // Helper function to save log to local storage
             function saveLogToStorage(lat, lng, feeling, notes, photo) {
                 const log = {
                     latitude: lat,
@@ -118,11 +119,10 @@
                     timestamp: new Date().toISOString()
                 };
 
-                localStorage.setItem(`log_${lat}_${lng}`, JSON.stringify(log));
+                localStorage.setItem(`log_${lat}_${lng}_${log.timestamp}`, JSON.stringify(log));
                 alert('Log saved!');
             }
 
-            // Helper function to add marker to the map
             function addMarker(lat, lng, feeling, notes, photo) {
                 const marker = L.marker([lat, lng]).addTo(map)
                     .bindPopup(`<b>${feeling}</b><br>${notes}<br>${photo ? '<img src="' + photo + '" width="100px"/>' : ''}<br><small>${new Date().toISOString()}</small>`)
