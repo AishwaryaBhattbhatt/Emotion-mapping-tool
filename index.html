@@ -91,6 +91,7 @@
         let emotionLogs = [];
         let selectedFeeling = null;
         let capturedPhoto = null;
+        let stream;
 
         const feelingColors = {
             excited: '#b2fe92',
@@ -138,7 +139,8 @@
         function initCamera() {
             const video = document.getElementById('camera-feed');
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                .then(stream => {
+                .then(s => {
+                    stream = s;
                     video.srcObject = stream;
                 })
                 .catch(error => {
@@ -155,6 +157,7 @@
                 video.style.backgroundImage = `url(${capturedPhoto})`;
                 video.style.backgroundSize = 'cover';
                 video.style.backgroundPosition = 'center';
+                video.style.display = 'block';
                 alert("Photo captured!");
             });
         }
@@ -186,6 +189,7 @@
             document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
             selectedFeeling = null;
             capturedPhoto = null;
+            restartCamera();
 
             const saveConfirmation = document.getElementById('save-confirmation');
             saveConfirmation.style.display = 'block';
@@ -212,6 +216,23 @@
 
             const marker = L.marker([log.position[0] + Math.random() * 0.0001, log.position[1] + Math.random() * 0.0001], {icon: markerIcon}).addTo(map);
             marker.bindPopup(popupContent).openPopup();
+        }
+
+        function restartCamera() {
+            const video = document.getElementById('camera-feed');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(s => {
+                    stream = s;
+                    video.srcObject = stream;
+                    video.play();
+                    video.style.backgroundImage = 'none';
+                })
+                .catch(error => {
+                    console.error("Error accessing the camera:", error);
+                });
         }
 
         window.onload = initMap;
