@@ -61,9 +61,26 @@
         #save-log:hover, #restart-logging:hover {
             background-color: #0056b3;
         }
+        .toggle-button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+        }
+        .toggle-button.off {
+            background-color: #d9534f;
+        }
     </style>
 </head>
 <body>
+    <div>
+        <button id="toggle-gps" class="toggle-button" onclick="toggleGPS()">GPS: Off</button>
+        <button id="toggle-camera" class="toggle-button" onclick="toggleCamera()">Camera: Off</button>
+    </div>
     <div id="form">
         <div class="field-title">Photo:</div>
         <video id="camera-feed" autoplay playsinline></video>
@@ -92,6 +109,8 @@
         let selectedFeeling = null;
         let capturedPhoto = null;
         let stream;
+        let gpsEnabled = false;
+        let watchId;
 
         const feelingColors = {
             excited: '#b2fe92',
@@ -108,16 +127,39 @@
                 center: { lat: 43.650795, lng: -79.398091 }
             });
 
-            requestLocation();
-
             initFeelingTags();
             initCamera();
             loadLogs();
         }
 
+        function toggleGPS() {
+            gpsEnabled = !gpsEnabled;
+            const button = document.getElementById('toggle-gps');
+            if (gpsEnabled) {
+                button.textContent = 'GPS: On';
+                button.classList.remove('off');
+                requestLocation();
+            } else {
+                button.textContent = 'GPS: Off';
+                button.classList.add('off');
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                }
+                if (currentPositionMarker) {
+                    currentPositionMarker.setMap(null);
+                    currentPositionMarker = null;
+                }
+                if (currentPositionCircle) {
+                    currentPositionCircle.setMap(null);
+                    currentPositionCircle = null;
+                }
+            }
+        }
+
         function requestLocation() {
             if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(function(position) {
+                watchId = navigator.geolocation.watchPosition(function(position) {
                     const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
                     map.setCenter(pos);
                     if (currentPositionMarker) {
@@ -166,6 +208,29 @@
             });
         }
 
+        function toggleCamera() {
+            const button = document.getElementById('toggle-camera');
+            const video = document.getElementById('camera-feed');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                video.srcObject = null;
+                button.textContent = 'Camera: Off';
+                button.classList.add('off');
+            } else {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                    .then(s => {
+                        stream = s;
+                        video.srcObject = stream;
+                        button.textContent = 'Camera: On';
+                        button.classList.remove('off');
+                    })
+                    .catch(error => {
+                        console.error("Error accessing the camera:", error);
+                    });
+            }
+        }
+
         function initFeelingTags() {
             const tags = document.querySelectorAll('.feeling-tag');
             tags.forEach(tag => {
@@ -183,6 +248,7 @@
                 .then(s => {
                     stream = s;
                     video.srcObject = stream;
+                    document.getElementById('toggle-camera').textContent = 'Camera: On';
                 })
                 .catch(error => {
                     console.error("Error accessing the camera:", error);
