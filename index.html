@@ -126,7 +126,15 @@
                         currentPositionMarker = new google.maps.Marker({
                             position: pos,
                             map: map,
-                            title: 'Current Location'
+                            title: 'Current Location',
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 10,
+                                fillColor: 'blue',
+                                fillOpacity: 1,
+                                strokeWeight: 2,
+                                strokeColor: 'white'
+                            }
                         });
                     }
                     addCurrentPositionCircle(pos);
