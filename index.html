@@ -63,6 +63,7 @@
             background-color: #0056b3;
         }
     </style>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR3nhIW56taOqanoBa0I4nVJiiUvQylf4"></script>
 </head>
 <body>
     <div id="form">
@@ -93,7 +94,6 @@
         let selectedFeeling = null;
         let capturedPhoto = null;
         let stream;
-        let watchId;
 
         const feelingColors = {
             excited: '#b2fe92',
@@ -133,16 +133,9 @@
                     currentPosition = [position.coords.latitude, position.coords.longitude];
                     map.setView(currentPosition, 13); // Adjust zoom level to show approximately a 10 km radius
                     addCurrentPositionCircle();
-
-                    watchId = navigator.geolocation.watchPosition(updatePosition, function(error) {
-                        console.error("Error: " + error.message);
-                    }, {
-                        enableHighAccuracy: true,
-                        timeout: 5000,
-                        maximumAge: 0
-                    });
                 }, function(error) {
                     console.error("Error: " + error.message);
+                    getGoogleLocation();
                 }, {
                     enableHighAccuracy: true,
                     timeout: 5000,
@@ -150,19 +143,33 @@
                 });
             } else {
                 console.log("Geolocation is not supported by this browser.");
+                getGoogleLocation();
             }
         }
 
-        function updatePosition(position) {
-            currentPosition = [position.coords.latitude, position.coords.longitude];
-            map.setView(currentPosition);
-            if (currentPositionCircle) {
-                map.removeLayer(currentPositionCircle);
+        function getGoogleLocation() {
+            if (navigator.onLine) {
+                fetch(`https://www.googleapis.com/geolocation/v1/geolocate?key=YOUR_API_KEY`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    currentPosition = [data.location.lat, data.location.lng];
+                    map.setView(currentPosition, 13);
+                    addCurrentPositionCircle();
+                })
+                .catch(error => {
+                    console.error("Error fetching Google location: ", error);
+                });
+            } else {
+                alert("Unable to get location. Please check your internet connection.");
             }
-            addCurrentPositionCircle();
         }
 
         function addCurrentPositionCircle() {
+            if (currentPositionCircle) {
+                map.removeLayer(currentPositionCircle);
+            }
             currentPositionCircle = L.circle(currentPosition, {
                 color: 'blue',
                 fillColor: '#30f',
