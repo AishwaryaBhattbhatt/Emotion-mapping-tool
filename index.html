@@ -74,6 +74,23 @@
         .toggle-button.off {
             background-color: #d9534f;
         }
+        #manual-log-form {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        #manual-log-form input, #manual-log-form textarea {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -103,6 +120,25 @@
     </div>
     <div id="map"></div>
 
+    <div id="manual-log-form">
+        <h3>Log a Feeling</h3>
+        <div class="field-title">Feeling:</div>
+        <div id="manual-feeling-tags">
+            <span class="feeling-tag" data-feeling="excited" style="background-color: #b2fe92;">😃 Excited</span>
+            <span class="feeling-tag" data-feeling="curious" style="background-color: #aaffdd;">🤔 Curious</span>
+            <span class="feeling-tag" data-feeling="happy" style="background-color: #ecfa6f;">😊 Happy</span>
+            <span class="feeling-tag" data-feeling="overwhelmed" style="background-color: #fa9c9c;">😵 Overwhelmed</span>
+            <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
+            <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
+        </div>
+        <div class="field-title">Notes:</div>
+        <textarea id="manual-notes" placeholder="Enter your notes here"></textarea>
+        <div class="field-title">Upload Photo:</div>
+        <input type="file" id="manual-photo" accept="image/*">
+        <button onclick="saveManualLog()">Save Log</button>
+        <button onclick="closeManualLogForm()">Cancel</button>
+    </div>
+
     <script>
         let map, currentPositionMarker, currentPositionCircle;
         let emotionLogs = JSON.parse(localStorage.getItem('emotionLogs')) || [];
@@ -111,6 +147,7 @@
         let stream;
         let gpsEnabled = false;
         let watchId;
+        let manualLogPosition = null;
 
         const feelingColors = {
             excited: '#b2fe92',
@@ -125,6 +162,10 @@
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 13,
                 center: { lat: 43.650795, lng: -79.398091 }
+            });
+
+            map.addListener('click', function(e) {
+                openManualLogForm(e.latLng);
             });
 
             initFeelingTags();
@@ -365,6 +406,74 @@
             emotionLogs = [];
             // Clear all markers from the map
             initMap();
+        }
+
+        function openManualLogForm(latLng) {
+            manualLogPosition = latLng;
+            document.getElementById('manual-log-form').style.display = 'block';
+        }
+
+        function closeManualLogForm() {
+            document.getElementById('manual-log-form').style.display = 'none';
+            manualLogPosition = null;
+        }
+
+        function saveManualLog() {
+            const feelingTags = document.querySelectorAll('#manual-feeling-tags .feeling-tag');
+            let manualSelectedFeeling = null;
+            feelingTags.forEach(tag => {
+                if (tag.classList.contains('selected')) {
+                    manualSelectedFeeling = tag.dataset.feeling;
+                }
+            });
+
+            if (!manualSelectedFeeling) {
+                alert("Please select a feeling before saving.");
+                return;
+            }
+
+            const notes = document.getElementById('manual-notes').value;
+            const photoInput = document.getElementById('manual-photo');
+            let photo = null;
+
+            if (photoInput.files && photoInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    photo = e.target.result;
+                    const log = {
+                        position: { lat: manualLogPosition.lat(), lng: manualLogPosition.lng() },
+                        feeling: manualSelectedFeeling,
+                        notes: notes,
+                        photo: photo
+                    };
+
+                    emotionLogs.push(log);
+                    localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
+                    addLogToMap(log);
+
+                    document.getElementById('manual-notes').value = '';
+                    photoInput.value = '';
+                    feelingTags.forEach(tag => tag.classList.remove('selected'));
+                    closeManualLogForm();
+                };
+                reader.readAsDataURL(photoInput.files[0]);
+            } else {
+                const log = {
+                    position: { lat: manualLogPosition.lat(), lng: manualLogPosition.lng() },
+                    feeling: manualSelectedFeeling,
+                    notes: notes,
+                    photo: null // No photo for manual logs if not uploaded
+                };
+
+                emotionLogs.push(log);
+                localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
+                addLogToMap(log);
+
+                document.getElementById('manual-notes').value = '';
+                photoInput.value = '';
+                feelingTags.forEach(tag => tag.classList.remove('selected'));
+                closeManualLogForm();
+            }
         }
 
         window.onload = initMap;
