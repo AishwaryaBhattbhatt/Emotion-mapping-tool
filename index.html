@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emotion Mapping Tool</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR3nhIW56taOqanoBa0I4nVJiiUvQylf4"></script>
     <style>
         #map { height: 400px; margin-bottom: 20px; }
@@ -89,7 +87,7 @@
     <div id="map"></div>
 
     <script>
-        let map, currentPosition, currentPositionCircle;
+        let map, currentPositionMarker, currentPositionCircle;
         let emotionLogs = JSON.parse(localStorage.getItem('emotionLogs')) || [];
         let selectedFeeling = null;
         let capturedPhoto = null;
@@ -105,14 +103,10 @@
         };
 
         function initMap() {
-            map = L.map('map').setView([0, 0], 2);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '',
-                minZoom: 2,
-                maxZoom: 18,
-                tileSize: 256,
-                zoomOffset: 0
-            }).addTo(map);
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 13,
+                center: { lat: 43.650795, lng: -79.398091 }
+            });
 
             requestLocation();
 
@@ -124,9 +118,18 @@
         function requestLocation() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(function(position) {
-                    currentPosition = [position.coords.latitude, position.coords.longitude];
-                    map.setView(currentPosition, 13); // Adjust zoom level to show approximately a 10 km radius
-                    addCurrentPositionCircle();
+                    const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                    map.setCenter(pos);
+                    if (currentPositionMarker) {
+                        currentPositionMarker.setPosition(pos);
+                    } else {
+                        currentPositionMarker = new google.maps.Marker({
+                            position: pos,
+                            map: map,
+                            title: 'Current Location'
+                        });
+                    }
+                    addCurrentPositionCircle(pos);
                 }, function(error) {
                     console.error("Error: " + error.message);
                 }, {
@@ -139,16 +142,20 @@
             }
         }
 
-        function addCurrentPositionCircle() {
+        function addCurrentPositionCircle(position) {
             if (currentPositionCircle) {
-                map.removeLayer(currentPositionCircle);
+                currentPositionCircle.setMap(null);
             }
-            currentPositionCircle = L.circle(currentPosition, {
-                color: 'blue',
-                fillColor: '#30f',
-                fillOpacity: 0.2,
+            currentPositionCircle = new google.maps.Circle({
+                strokeColor: '#0000FF',
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: '#0000FF',
+                fillOpacity: 0.35,
+                map: map,
+                center: position,
                 radius: 5 // 5 meters radius
-            }).addTo(map);
+            });
         }
 
         function initFeelingTags() {
@@ -189,7 +196,7 @@
         }
 
         function saveLog() {
-            if (!currentPosition) {
+            if (!currentPositionMarker) {
                 alert("Unable to get your current location. Please try again.");
                 return;
             }
@@ -200,9 +207,10 @@
             }
 
             const notes = document.getElementById('notes').value;
+            const position = currentPositionMarker.getPosition();
 
             const log = {
-                position: currentPosition,
+                position: { lat: position.lat(), lng: position.lng() },
                 feeling: selectedFeeling,
                 notes: notes,
                 photo: capturedPhoto
@@ -234,15 +242,27 @@
                 </div>
             `;
 
-            const markerIcon = L.divIcon({
-                className: 'custom-div-icon',
-                html: `<div style='background-color:${feelingColors[log.feeling]}; width: 24px; height: 24px; border-radius: 50%;'></div>`,
-                iconSize: [30, 42],
-                iconAnchor: [15, 42]
+            const marker = new google.maps.Marker({
+                position: log.position,
+                map: map,
+                title: log.feeling,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: feelingColors[log.feeling],
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: 'white'
+                }
             });
 
-            const marker = L.marker([log.position[0] + Math.random() * 0.0001, log.position[1] + Math.random() * 0.0001], {icon: markerIcon}).addTo(map);
-            marker.bindPopup(popupContent);
+            const infowindow = new google.maps.InfoWindow({
+                content: popupContent
+            });
+
+            marker.addListener('click', () => {
+                infowindow.open(map, marker);
+            });
         }
 
         function loadLogs() {
@@ -269,14 +289,8 @@
         function restartLogging() {
             localStorage.removeItem('emotionLogs');
             emotionLogs = [];
-            map.eachLayer(function (layer) {
-                if (layer instanceof L.Marker || layer instanceof L.Circle) {
-                    map.removeLayer(layer);
-                }
-            });
-            if (currentPosition) {
-                addCurrentPositionCircle();
-            }
+            // Clear all markers from the map
+            initMap();
         }
 
         window.onload = initMap;
