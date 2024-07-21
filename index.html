@@ -47,7 +47,7 @@
         #capture-photo {
             margin-bottom: 15px;
         }
-        #save-log {
+        #save-log, #restart-logging {
             display: block;
             width: 100%;
             padding: 15px;
@@ -59,7 +59,7 @@
             cursor: pointer;
             margin-top: 10px;
         }
-        #save-log:hover {
+        #save-log:hover, #restart-logging:hover {
             background-color: #0056b3;
         }
     </style>
@@ -82,6 +82,7 @@
         <div class="field-title">Notes:</div>
         <textarea id="notes" placeholder="Enter your notes here"></textarea>
         <button id="save-log" onclick="saveLog()">Save Log</button>
+        <button id="restart-logging" onclick="restartLogging()">Restart Logging</button>
         <div id="save-confirmation">Log saved and marker added to the map!</div>
     </div>
     <div id="map"></div>
@@ -115,19 +116,21 @@
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(function(position) {
                     currentPosition = [position.coords.latitude, position.coords.longitude];
-                    map.setView(currentPosition, 18); // High zoom level to cover a small area
+                    map.setView(currentPosition, 13); // Adjust zoom level to show approximately a 10 km radius
 
-                    // Add a circle to show the 10 meter radius
+                    // Add a circle to show the 5 meter radius
                     currentPositionCircle = L.circle(currentPosition, {
                         color: 'blue',
                         fillColor: '#30f',
                         fillOpacity: 0.2,
-                        radius: 10 // 10 meters radius
+                        radius: 5 // 5 meters radius
                     }).addTo(map);
                 }, function(error) {
                     console.error("Error: " + error.message);
                 }, {
-                    enableHighAccuracy: true // Ensure high accuracy for the location
+                    enableHighAccuracy: true, // Ensure high accuracy for the location
+                    timeout: 5000,
+                    maximumAge: 0
                 });
             } else {
                 console.log("Geolocation is not supported by this browser.");
@@ -251,6 +254,24 @@
                 .catch(error => {
                     console.error("Error accessing the camera:", error);
                 });
+        }
+
+        function restartLogging() {
+            localStorage.removeItem('emotionLogs');
+            emotionLogs = [];
+            map.eachLayer(function (layer) {
+                if (layer instanceof L.Marker || layer instanceof L.Circle) {
+                    map.removeLayer(layer);
+                }
+            });
+            if (currentPosition) {
+                currentPositionCircle = L.circle(currentPosition, {
+                    color: 'blue',
+                    fillColor: '#30f',
+                    fillOpacity: 0.2,
+                    radius: 5 // 5 meters radius
+                }).addTo(map);
+            }
         }
 
         window.onload = initMap;
