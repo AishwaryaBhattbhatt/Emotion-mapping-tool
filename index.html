@@ -93,6 +93,7 @@
         let selectedFeeling = null;
         let capturedPhoto = null;
         let stream;
+        let watchId;
 
         const feelingColors = {
             excited: '#b2fe92',
@@ -113,32 +114,55 @@
                 zoomOffset: 0
             }).addTo(map);
 
+            requestLocation();
+
+            initFeelingTags();
+            initCamera();
+            loadLogs();
+        }
+
+        function requestLocation() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(function(position) {
                     currentPosition = [position.coords.latitude, position.coords.longitude];
                     map.setView(currentPosition, 13); // Adjust zoom level to show approximately a 10 km radius
+                    addCurrentPositionCircle();
 
-                    // Add a circle to show the 5 meter radius
-                    currentPositionCircle = L.circle(currentPosition, {
-                        color: 'blue',
-                        fillColor: '#30f',
-                        fillOpacity: 0.2,
-                        radius: 5 // 5 meters radius
-                    }).addTo(map);
+                    watchId = navigator.geolocation.watchPosition(updatePosition, function(error) {
+                        console.error("Error: " + error.message);
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    });
                 }, function(error) {
                     console.error("Error: " + error.message);
                 }, {
-                    enableHighAccuracy: true, // Ensure high accuracy for the location
+                    enableHighAccuracy: true,
                     timeout: 5000,
                     maximumAge: 0
                 });
             } else {
                 console.log("Geolocation is not supported by this browser.");
             }
+        }
 
-            initFeelingTags();
-            initCamera();
-            loadLogs();
+        function updatePosition(position) {
+            currentPosition = [position.coords.latitude, position.coords.longitude];
+            map.setView(currentPosition);
+            if (currentPositionCircle) {
+                map.removeLayer(currentPositionCircle);
+            }
+            addCurrentPositionCircle();
+        }
+
+        function addCurrentPositionCircle() {
+            currentPositionCircle = L.circle(currentPosition, {
+                color: 'blue',
+                fillColor: '#30f',
+                fillOpacity: 0.2,
+                radius: 5 // 5 meters radius
+            }).addTo(map);
         }
 
         function initFeelingTags() {
@@ -265,12 +289,7 @@
                 }
             });
             if (currentPosition) {
-                currentPositionCircle = L.circle(currentPosition, {
-                    color: 'blue',
-                    fillColor: '#30f',
-                    fillOpacity: 0.2,
-                    radius: 5 // 5 meters radius
-                }).addTo(map);
+                addCurrentPositionCircle();
             }
         }
 
