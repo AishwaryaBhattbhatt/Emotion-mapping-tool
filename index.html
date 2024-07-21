@@ -6,6 +6,7 @@
     <title>Emotion Mapping Tool</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR3nhIW56taOqanoBa0I4nVJiiUvQylf4"></script>
     <style>
         #map { height: 400px; margin-bottom: 20px; }
         #form { margin-top: 20px; }
@@ -63,7 +64,6 @@
             background-color: #0056b3;
         }
     </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR3nhIW56taOqanoBa0I4nVJiiUvQylf4"></script>
 </head>
 <body>
     <div id="form">
@@ -89,7 +89,7 @@
     <div id="map"></div>
 
     <script>
-        let map, currentPosition = [43.650795, -79.398091], currentPositionCircle;
+        let map, currentPosition, currentPositionCircle;
         let emotionLogs = JSON.parse(localStorage.getItem('emotionLogs')) || [];
         let selectedFeeling = null;
         let capturedPhoto = null;
@@ -105,7 +105,7 @@
         };
 
         function initMap() {
-            map = L.map('map').setView(currentPosition, 13); // Initial view set to provided coordinates
+            map = L.map('map').setView([0, 0], 2);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '',
                 minZoom: 2,
@@ -123,19 +123,12 @@
 
         function requestLocation() {
             if ("geolocation" in navigator) {
-                navigator.permissions.query({name: 'geolocation'}).then(function(result) {
-                    if (result.state !== 'granted') {
-                        alert('Please enable location services for accurate GPS tracking.');
-                    }
-                });
-
                 navigator.geolocation.getCurrentPosition(function(position) {
                     currentPosition = [position.coords.latitude, position.coords.longitude];
                     map.setView(currentPosition, 13); // Adjust zoom level to show approximately a 10 km radius
                     addCurrentPositionCircle();
                 }, function(error) {
                     console.error("Error: " + error.message);
-                    getGoogleLocation();
                 }, {
                     enableHighAccuracy: true,
                     timeout: 5000,
@@ -143,26 +136,6 @@
                 });
             } else {
                 console.log("Geolocation is not supported by this browser.");
-                getGoogleLocation();
-            }
-        }
-
-        function getGoogleLocation() {
-            if (navigator.onLine) {
-                fetch(`https://www.googleapis.com/geolocation/v1/geolocate?key=YOUR_API_KEY`, {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    currentPosition = [data.location.lat, data.location.lng];
-                    map.setView(currentPosition, 13);
-                    addCurrentPositionCircle();
-                })
-                .catch(error => {
-                    console.error("Error fetching Google location: ", error);
-                });
-            } else {
-                alert("Unable to get location. Please check your internet connection.");
             }
         }
 
@@ -198,7 +171,6 @@
                 })
                 .catch(error => {
                     console.error("Error accessing the camera:", error);
-                    alert("Camera access denied. Please enable camera permissions.");
                 });
 
             document.getElementById('capture-photo').addEventListener('click', function() {
@@ -291,7 +263,6 @@
                 })
                 .catch(error => {
                     console.error("Error accessing the camera:", error);
-                    alert("Camera access denied. Please enable camera permissions.");
                 });
         }
 
