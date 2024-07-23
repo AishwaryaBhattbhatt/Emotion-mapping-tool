@@ -46,7 +46,7 @@
         #capture-photo {
             margin-bottom: 15px;
         }
-        #save-log, #restart-logging, #play-pause-animation {
+        #save-log, #restart-logging {
             display: block;
             width: 100%;
             padding: 15px;
@@ -58,7 +58,7 @@
             cursor: pointer;
             margin-top: 10px;
         }
-        #save-log:hover, #restart-logging:hover, #play-pause-animation:hover {
+        #save-log:hover, #restart-logging:hover {
             background-color: #0056b3;
         }
         .toggle-button {
@@ -91,6 +91,17 @@
             padding: 10px;
             font-size: 16px;
         }
+        #slider-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #slider {
+            width: 80%;
+        }
+        #slider-value {
+            font-size: 18px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -116,10 +127,13 @@
         <textarea id="notes" placeholder="Enter your notes here"></textarea>
         <button id="save-log" onclick="saveLog()">Save Log</button>
         <button id="restart-logging" onclick="restartLogging()">Restart Logging</button>
-        <button id="play-pause-animation" onclick="toggleAnimation()">Play Journey</button>
         <div id="save-confirmation">Log saved and marker added to the map!</div>
     </div>
     <div id="map"></div>
+    <div id="slider-container">
+        <input type="range" id="slider" min="0" max="0" step="1" value="0" oninput="updateSlider()">
+        <div id="slider-value"></div>
+    </div>
 
     <div id="manual-log-form">
         <h3>Log a Feeling</h3>
@@ -149,10 +163,8 @@
         let gpsEnabled = false;
         let watchId;
         let manualLogPosition = null;
-        let animationInterval;
-        let animationPlaying = false;
-        let animationIndex = 0;
-        let animationMarkers = [];
+        let markers = [];
+        let currentMarker = null;
 
         const feelingColors = {
             excited: '#b2fe92',
@@ -176,6 +188,7 @@
             initFeelingTags();
             initCamera();
             loadLogs();
+            initSlider();
         }
 
         function toggleGPS() {
@@ -352,6 +365,8 @@
             setTimeout(() => {
                 saveConfirmation.style.display = 'none';
             }, 3000);
+
+            updateSlider();
         }
 
         function addLogToMap(log) {
@@ -384,6 +399,8 @@
             marker.addListener('click', () => {
                 infowindow.open(map, marker);
             });
+
+            markers.push(marker);
         }
 
         function loadLogs() {
@@ -410,8 +427,11 @@
         function restartLogging() {
             localStorage.removeItem('emotionLogs');
             emotionLogs = [];
-            // Clear all markers from the map
-            initMap();
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+            document.getElementById('slider').max = 0;
+            document.getElementById('slider').value = 0;
+            document.getElementById('slider-value').textContent = '';
         }
 
         function openManualLogForm(latLng) {
@@ -462,6 +482,8 @@
                     photoInput.value = '';
                     feelingTags.forEach(tag => tag.classList.remove('selected'));
                     closeManualLogForm();
+
+                    updateSlider();
                 };
                 reader.readAsDataURL(photoInput.files[0]);
             } else {
@@ -481,81 +503,53 @@
                 photoInput.value = '';
                 feelingTags.forEach(tag => tag.classList.remove('selected'));
                 closeManualLogForm();
+
+                updateSlider();
             }
         }
 
-        function toggleAnimation() {
-            if (animationPlaying) {
-                clearInterval(animationInterval);
-                document.getElementById('play-pause-animation').textContent = 'Play Journey';
-                animationPlaying = false;
-                animationMarkers.forEach(marker => marker.setMap(null));
-                animationMarkers = [];
-            } else {
-                animationIndex = 0;
-                document.getElementById('play-pause-animation').textContent = 'Pause Journey';
-                animationPlaying = true;
-                animationInterval = setInterval(playJourney, 1000);
-            }
+        function initSlider() {
+            const slider = document.getElementById('slider');
+            slider.max = emotionLogs.length - 1;
+            slider.value = 0;
+            updateSlider();
         }
 
-        function playJourney() {
-            if (animationIndex >= emotionLogs.length) {
-                clearInterval(animationInterval);
-                document.getElementById('play-pause-animation').textContent = 'Play Journey';
-                animationPlaying = false;
+        function updateSlider() {
+            const slider = document.getElementById('slider');
+            const sliderValue = document.getElementById('slider-value');
+            const value = parseInt(slider.value);
+            slider.max = emotionLogs.length - 1;
+            if (emotionLogs.length === 0) {
+                sliderValue.textContent = '';
                 return;
             }
 
-            const log = emotionLogs[animationIndex];
-            map.setCenter(log.position);
-            const marker = new google.maps.Marker({
-                position: log.position,
-                map: map,
-                title: log.feeling,
-                icon: {
+            if (currentMarker) {
+                currentMarker.setIcon({
                     path: google.maps.SymbolPath.CIRCLE,
                     scale: 10,
-                    fillColor: feelingColors[log.feeling],
-                    fillOpacity: 1,
-                    strokeWeight: 2,
-                    strokeColor: 'white'
-                }
+                    fillColor: currentMarker.getIcon().fillColor,
+                    fillOpacity: currentMarker.getIcon().fillOpacity,
+                    strokeWeight: currentMarker.getIcon().strokeWeight,
+                    strokeColor: currentMarker.getIcon().strokeColor
+                });
+            }
+
+            const log = emotionLogs[value];
+            map.setCenter(log.position);
+
+            currentMarker = markers[value];
+            currentMarker.setIcon({
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 50,
+                fillColor: currentMarker.getIcon().fillColor,
+                fillOpacity: currentMarker.getIcon().fillOpacity,
+                strokeWeight: currentMarker.getIcon().strokeWeight,
+                strokeColor: currentMarker.getIcon().strokeColor
             });
 
-            animationMarkers.push(marker);
-            animateMarker(marker);
-            animationIndex++;
-        }
-
-        function animateMarker(marker) {
-            let growing = true;
-            let scale = 10;
-            const maxScale = 50;
-            const minScale = 10;
-
-            const animation = setInterval(() => {
-                if (growing) {
-                    scale += 2;
-                    if (scale >= maxScale) {
-                        growing = false;
-                    }
-                } else {
-                    scale -= 2;
-                    if (scale <= minScale) {
-                        clearInterval(animation);
-                    }
-                }
-
-                marker.setIcon({
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: scale,
-                    fillColor: marker.getIcon().fillColor,
-                    fillOpacity: marker.getIcon().fillOpacity,
-                    strokeWeight: marker.getIcon().strokeWeight,
-                    strokeColor: marker.getIcon().strokeColor
-                });
-            }, 50);
+            sliderValue.textContent = `Date: ${new Date(log.timestamp).toLocaleString()} - Feeling: ${log.feeling}`;
         }
 
         window.onload = initMap;
