@@ -164,7 +164,7 @@
         let watchId;
         let manualLogPosition = null;
         let markers = [];
-        let currentMarker = null;
+        let currentInfoWindow = null;
 
         const feelingColors = {
             excited: '#b2fe92',
@@ -400,7 +400,7 @@
                 infowindow.open(map, marker);
             });
 
-            markers.push(marker);
+            markers.push({ marker, infowindow });
         }
 
         function loadLogs() {
@@ -427,7 +427,7 @@
         function restartLogging() {
             localStorage.removeItem('emotionLogs');
             emotionLogs = [];
-            markers.forEach(marker => marker.setMap(null));
+            markers.forEach(({ marker }) => marker.setMap(null));
             markers = [];
             document.getElementById('slider').max = 0;
             document.getElementById('slider').value = 0;
@@ -525,29 +525,15 @@
                 return;
             }
 
-            if (currentMarker) {
-                currentMarker.setIcon({
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: currentMarker.getIcon().fillColor,
-                    fillOpacity: currentMarker.getIcon().fillOpacity,
-                    strokeWeight: currentMarker.getIcon().strokeWeight,
-                    strokeColor: currentMarker.getIcon().strokeColor
-                });
+            if (currentInfoWindow) {
+                currentInfoWindow.close();
             }
 
             const log = emotionLogs[value];
             map.setCenter(log.position);
 
-            currentMarker = markers[value];
-            currentMarker.setIcon({
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 50,
-                fillColor: currentMarker.getIcon().fillColor,
-                fillOpacity: currentMarker.getIcon().fillOpacity,
-                strokeWeight: currentMarker.getIcon().strokeWeight,
-                strokeColor: currentMarker.getIcon().strokeColor
-            });
+            currentInfoWindow = markers[value].infowindow;
+            currentInfoWindow.open(map, markers[value].marker);
 
             sliderValue.textContent = `Date: ${new Date(log.timestamp).toLocaleString()} - Feeling: ${log.feeling}`;
         }
