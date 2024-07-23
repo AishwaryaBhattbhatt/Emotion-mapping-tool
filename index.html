@@ -152,6 +152,7 @@
         let animationInterval;
         let animationPlaying = false;
         let animationIndex = 0;
+        let animationMarkers = [];
 
         const feelingColors = {
             excited: '#b2fe92',
@@ -488,6 +489,8 @@
                 clearInterval(animationInterval);
                 document.getElementById('play-pause-animation').textContent = 'Play Journey';
                 animationPlaying = false;
+                animationMarkers.forEach(marker => marker.setMap(null));
+                animationMarkers = [];
             } else {
                 animationIndex = 0;
                 document.getElementById('play-pause-animation').textContent = 'Pause Journey';
@@ -520,24 +523,39 @@
                 }
             });
 
-            const popupContent = `
-                <div style="background-color: ${feelingColors[log.feeling]}; padding: 10px; border-radius: 5px;">
-                    ${log.photo ? `<img src="${log.photo}" alt="Captured photo" style="max-width: 100px; max-height: 100px;"><br>` : ''}
-                    <strong>Feeling:</strong> ${log.feeling}<br>
-                    <strong>Notes:</strong> ${log.notes}
-                </div>
-            `;
-
-            const infowindow = new google.maps.InfoWindow({
-                content: popupContent
-            });
-
-            marker.addListener('click', () => {
-                infowindow.open(map, marker);
-            });
-
-            infowindow.open(map, marker);
+            animationMarkers.push(marker);
+            animateMarker(marker);
             animationIndex++;
+        }
+
+        function animateMarker(marker) {
+            let growing = true;
+            let scale = 10;
+            const maxScale = 50;
+            const minScale = 10;
+
+            const animation = setInterval(() => {
+                if (growing) {
+                    scale += 2;
+                    if (scale >= maxScale) {
+                        growing = false;
+                    }
+                } else {
+                    scale -= 2;
+                    if (scale <= minScale) {
+                        clearInterval(animation);
+                    }
+                }
+
+                marker.setIcon({
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: scale,
+                    fillColor: marker.getIcon().fillColor,
+                    fillOpacity: marker.getIcon().fillOpacity,
+                    strokeWeight: marker.getIcon().strokeWeight,
+                    strokeColor: marker.getIcon().strokeColor
+                });
+            }, 50);
         }
 
         window.onload = initMap;
