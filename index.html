@@ -173,7 +173,7 @@
     </div>
 
     <script>
-        let map, currentPositionMarker, currentPositionCircle;
+        let map, currentPositionMarker, currentPositionCircle, geocoder;
         let emotionLogs = JSON.parse(localStorage.getItem('emotionLogs')) || [];
         let selectedFeeling = null;
         let capturedPhoto = null;
@@ -198,6 +198,8 @@
                 zoom: 13,
                 center: { lat: 43.650795, lng: -79.398091 }
             });
+
+            geocoder = new google.maps.Geocoder();
 
             map.addListener('click', function(e) {
                 openManualLogForm(e.latLng);
@@ -367,23 +369,35 @@
                 timestamp: new Date().toISOString()
             };
 
-            emotionLogs.push(log);
-            localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
-            addLogToMap(log);
+            geocoder.geocode({ location: log.position }, (results, status) => {
+                if (status === 'OK') {
+                    if (results[0]) {
+                        log.address = results[0].formatted_address;
+                    } else {
+                        log.address = 'Unknown location';
+                    }
+                } else {
+                    log.address = 'Geocoder failed';
+                }
 
-            document.getElementById('notes').value = '';
-            document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
-            selectedFeeling = null;
-            capturedPhoto = null;
-            restartCamera();
+                emotionLogs.push(log);
+                localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
+                addLogToMap(log);
 
-            const saveConfirmation = document.getElementById('save-confirmation');
-            saveConfirmation.style.display = 'block';
-            setTimeout(() => {
-                saveConfirmation.style.display = 'none';
-            }, 3000);
+                document.getElementById('notes').value = '';
+                document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
+                selectedFeeling = null;
+                capturedPhoto = null;
+                restartCamera();
 
-            updateSlider();
+                const saveConfirmation = document.getElementById('save-confirmation');
+                saveConfirmation.style.display = 'block';
+                setTimeout(() => {
+                    saveConfirmation.style.display = 'none';
+                }, 3000);
+
+                updateSlider();
+            });
         }
 
         function addLogToMap(log) {
@@ -391,7 +405,8 @@
                 <div style="background-color: ${feelingColors[log.feeling]}; padding: 10px; border-radius: 5px;">
                     ${log.photo ? `<img src="${log.photo}" alt="Captured photo" style="max-width: 100px; max-height: 100px;"><br>` : ''}
                     <strong>Feeling:</strong> ${log.feeling}<br>
-                    <strong>Observation:</strong> ${log.notes}
+                    <strong>Observation:</strong> ${log.notes}<br>
+                    <strong>Location:</strong> ${log.address}
                 </div>
             `;
 
@@ -491,16 +506,28 @@
                         timestamp: new Date().toISOString()
                     };
 
-                    emotionLogs.push(log);
-                    localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
-                    addLogToMap(log);
+                    geocoder.geocode({ location: log.position }, (results, status) => {
+                        if (status === 'OK') {
+                            if (results[0]) {
+                                log.address = results[0].formatted_address;
+                            } else {
+                                log.address = 'Unknown location';
+                            }
+                        } else {
+                            log.address = 'Geocoder failed';
+                        }
 
-                    document.getElementById('manual-notes').value = '';
-                    photoInput.value = '';
-                    feelingTags.forEach(tag => tag.classList.remove('selected'));
-                    closeManualLogForm();
+                        emotionLogs.push(log);
+                        localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
+                        addLogToMap(log);
 
-                    updateSlider();
+                        document.getElementById('manual-notes').value = '';
+                        photoInput.value = '';
+                        feelingTags.forEach(tag => tag.classList.remove('selected'));
+                        closeManualLogForm();
+
+                        updateSlider();
+                    });
                 };
                 reader.readAsDataURL(photoInput.files[0]);
             } else {
@@ -512,16 +539,27 @@
                     timestamp: new Date().toISOString()
                 };
 
-                emotionLogs.push(log);
-                localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
-                addLogToMap(log);
+                geocoder.geocode({ location: log.position }, (results, status) => {
+                    if (status === 'OK') {
+                        if (results[0]) {
+                            log.address = results[0].formatted_address;
+                        } else {
+                            log.address = 'Unknown location';
+                        }
+                    } else {
+                        log.address = 'Geocoder failed';
+                    }
 
-                document.getElementById('manual-notes').value = '';
-                photoInput.value = '';
-                feelingTags.forEach(tag => tag.classList.remove('selected'));
-                closeManualLogForm();
+                    emotionLogs.push(log);
+                    localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
+                    addLogToMap(log);
 
-                updateSlider();
+                    document.getElementById('manual-notes').value = '';
+                    feelingTags.forEach(tag => tag.classList.remove('selected'));
+                    closeManualLogForm();
+
+                    updateSlider();
+                });
             }
         }
 
