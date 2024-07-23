@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emotion Mapping Tool</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR3nhIW56taOqanoBa0I4nVJiiUvQylf4"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_RESTRICTED_API_KEY"></script>
     <style>
         #map { height: 400px; margin-bottom: 20px; }
         #form { margin-top: 20px; }
@@ -46,7 +46,7 @@
         #capture-photo {
             margin-bottom: 15px;
         }
-        #save-log, #restart-logging {
+        #save-log, #restart-logging, #play-pause-animation {
             display: block;
             width: 100%;
             padding: 15px;
@@ -58,7 +58,7 @@
             cursor: pointer;
             margin-top: 10px;
         }
-        #save-log:hover, #restart-logging:hover {
+        #save-log:hover, #restart-logging:hover, #play-pause-animation:hover {
             background-color: #0056b3;
         }
         .toggle-button {
@@ -116,6 +116,7 @@
         <textarea id="notes" placeholder="Enter your notes here"></textarea>
         <button id="save-log" onclick="saveLog()">Save Log</button>
         <button id="restart-logging" onclick="restartLogging()">Restart Logging</button>
+        <button id="play-pause-animation" onclick="toggleAnimation()">Play Journey</button>
         <div id="save-confirmation">Log saved and marker added to the map!</div>
     </div>
     <div id="map"></div>
@@ -148,6 +149,9 @@
         let gpsEnabled = false;
         let watchId;
         let manualLogPosition = null;
+        let animationInterval;
+        let animationPlaying = false;
+        let animationIndex = 0;
 
         const feelingColors = {
             excited: '#b2fe92',
@@ -328,7 +332,8 @@
                 position: { lat: position.lat(), lng: position.lng() },
                 feeling: selectedFeeling,
                 notes: notes,
-                photo: capturedPhoto
+                photo: capturedPhoto,
+                timestamp: new Date().toISOString()
             };
 
             emotionLogs.push(log);
@@ -444,7 +449,8 @@
                         position: { lat: manualLogPosition.lat(), lng: manualLogPosition.lng() },
                         feeling: manualSelectedFeeling,
                         notes: notes,
-                        photo: photo
+                        photo: photo,
+                        timestamp: new Date().toISOString()
                     };
 
                     emotionLogs.push(log);
@@ -462,7 +468,8 @@
                     position: { lat: manualLogPosition.lat(), lng: manualLogPosition.lng() },
                     feeling: manualSelectedFeeling,
                     notes: notes,
-                    photo: null // No photo for manual logs if not uploaded
+                    photo: null, // No photo for manual logs if not uploaded
+                    timestamp: new Date().toISOString()
                 };
 
                 emotionLogs.push(log);
@@ -474,6 +481,63 @@
                 feelingTags.forEach(tag => tag.classList.remove('selected'));
                 closeManualLogForm();
             }
+        }
+
+        function toggleAnimation() {
+            if (animationPlaying) {
+                clearInterval(animationInterval);
+                document.getElementById('play-pause-animation').textContent = 'Play Journey';
+                animationPlaying = false;
+            } else {
+                animationIndex = 0;
+                document.getElementById('play-pause-animation').textContent = 'Pause Journey';
+                animationPlaying = true;
+                animationInterval = setInterval(playJourney, 1000);
+            }
+        }
+
+        function playJourney() {
+            if (animationIndex >= emotionLogs.length) {
+                clearInterval(animationInterval);
+                document.getElementById('play-pause-animation').textContent = 'Play Journey';
+                animationPlaying = false;
+                return;
+            }
+
+            const log = emotionLogs[animationIndex];
+            map.setCenter(log.position);
+            const marker = new google.maps.Marker({
+                position: log.position,
+                map: map,
+                title: log.feeling,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: feelingColors[log.feeling],
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: 'white'
+                }
+            });
+
+            const popupContent = `
+                <div style="background-color: ${feelingColors[log.feeling]}; padding: 10px; border-radius: 5px;">
+                    ${log.photo ? `<img src="${log.photo}" alt="Captured photo" style="max-width: 100px; max-height: 100px;"><br>` : ''}
+                    <strong>Feeling:</strong> ${log.feeling}<br>
+                    <strong>Notes:</strong> ${log.notes}
+                </div>
+            `;
+
+            const infowindow = new google.maps.InfoWindow({
+                content: popupContent
+            });
+
+            marker.addListener('click', () => {
+                infowindow.open(map, marker);
+            });
+
+            infowindow.open(map, marker);
+            animationIndex++;
         }
 
         window.onload = initMap;
