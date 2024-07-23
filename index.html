@@ -79,6 +79,49 @@
         .toggle-button.off {
             background-color: #d9534f;
         }
+        .toggle-container {
+            display: flex;
+            align-items: center;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 25px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 2.5px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
         .icon {
             margin-right: 10px;
         }
@@ -142,13 +185,19 @@
     </div>
 
     <div id="log" class="tab-content active">
-        <div>
-            <button id="toggle-gps" class="toggle-button" onclick="toggleGPS()">
-                <span class="icon">📍</span> GPS: Off
-            </button>
-            <button id="toggle-camera" class="toggle-button" onclick="toggleCamera()">
-                <span class="icon">📷</span> Camera: Off
-            </button>
+        <div class="toggle-container">
+            <div class="toggle-switch">
+                <input type="checkbox" id="toggle-gps" onchange="toggleGPS()">
+                <span class="slider"></span>
+            </div>
+            <span class="icon">📍</span>
+        </div>
+        <div class="toggle-container">
+            <div class="toggle-switch">
+                <input type="checkbox" id="toggle-camera" onchange="toggleCamera()">
+                <span class="slider"></span>
+            </div>
+            <span class="icon">📷</span>
         </div>
         <div id="form">
             <div class="field-title">My View</div>
@@ -164,7 +213,7 @@
                 <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
                 <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
             </div>
-            <div class="field-title">Observation</div>
+            <div class="field-title">Observations</div>
             <textarea id="notes" placeholder="Enter your notes here"></textarea>
             <button id="save-log" onclick="saveLog()">Save Log</button>
             <button id="restart-logging" onclick="restartLogging()">Restart Logging</button>
@@ -191,7 +240,7 @@
             <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
             <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
         </div>
-        <div class="field-title">Observation</div>
+        <div class="field-title">Observations</div>
         <textarea id="manual-notes" placeholder="Enter your notes here"></textarea>
         <div class="field-title">My View</div>
         <input type="file" id="manual-photo" accept="image/*">
@@ -240,12 +289,10 @@
             gpsEnabled = !gpsEnabled;
             const button = document.getElementById('toggle-gps');
             if (gpsEnabled) {
-                button.textContent = 'GPS: On';
-                button.classList.remove('off');
+                button.checked = true;
                 requestLocation();
             } else {
-                button.textContent = 'GPS: Off';
-                button.classList.add('off');
+                button.checked = false;
                 if (watchId) {
                     navigator.geolocation.clearWatch(watchId);
                     watchId = null;
@@ -319,15 +366,13 @@
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
                 video.srcObject = null;
-                button.textContent = 'Camera: Off';
-                button.classList.add('off');
+                button.checked = false;
             } else {
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                     .then(s => {
                         stream = s;
                         video.srcObject = stream;
-                        button.textContent = 'Camera: On';
-                        button.classList.remove('off');
+                        button.checked = true;
                     })
                     .catch(error => {
                         console.error("Error accessing the camera:", error);
@@ -352,7 +397,7 @@
                 .then(s => {
                     stream = s;
                     video.srcObject = stream;
-                    document.getElementById('toggle-camera').textContent = 'Camera: On';
+                    document.getElementById('toggle-camera').checked = true;
                 })
                 .catch(error => {
                     console.error("Error accessing the camera:", error);
