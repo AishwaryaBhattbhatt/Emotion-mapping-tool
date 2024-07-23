@@ -9,7 +9,7 @@
         body {
             font-family: 'Helvetica Neue', sans-serif;
             margin: 0;
-            padding: 0;
+            padding: 0 20px;
             text-align: center;
         }
         #map { height: 400px; margin-bottom: 20px; }
@@ -85,6 +85,19 @@
             margin-bottom: 10px;
             padding: 10px;
             font-size: 16px;
+        }
+        .feeling-tag {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 5px;
+            border: 2px solid #ccc;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+        .feeling-tag.selected {
+            transform: scale(1.1);
         }
         #slider-container {
             margin-top: 20px;
