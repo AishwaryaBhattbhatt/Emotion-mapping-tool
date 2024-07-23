@@ -3,52 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emotion Mapping Tool</title>
+    <title>Mind on a Map</title>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR3nhIW56taOqanoBa0I4nVJiiUvQylf4"></script>
     <style>
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Helvetica Neue', sans-serif;
             margin: 0;
             padding: 0;
-        }
-        .tabs {
-            display: flex;
-            width: 100%;
-            background-color: #f0f0f0;
-            border-bottom: 1px solid #ccc;
-        }
-        .tab {
-            flex: 1;
-            padding: 15px 0;
             text-align: center;
-            cursor: pointer;
-            font-size: 18px;
         }
-        .tab.active {
-            background-color: white;
-            font-weight: bold;
-        }
-        .tab-content {
-            display: none;
-            padding: 20px;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        #map { height: 400px; }
-        .feeling-tag {
-            display: inline-block;
-            padding: 10px 15px;
-            margin: 5px;
-            border: 2px solid #ccc;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 18px;
-        }
-        .feeling-tag.selected {
-            transform: scale(1.1);
-        }
+        #map { height: 400px; margin-bottom: 20px; }
+        #form { margin-top: 20px; }
         .field-title {
             font-weight: bold;
             margin-top: 15px;
@@ -84,52 +49,25 @@
         #save-log:hover, #restart-logging:hover {
             background-color: #0056b3;
         }
-        .toggle-container {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-        }
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 25px;
-        }
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
+        .toggle-button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
             cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            display: inline-flex;
+            align-items: center;
         }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
+        .toggle-button.off {
+            background-color: #d9534f;
+        }
+        .toggle-button img {
             width: 20px;
-            left: 4px;
-            bottom: 2.5px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #2196F3;
-        }
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        .icon {
-            margin-right: 10px;
+            height: 20px;
+            margin-right: 8px;
         }
         #manual-log-form {
             display: none;
@@ -159,61 +97,52 @@
             font-size: 18px;
             margin-top: 10px;
         }
+        h1 {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <div class="tabs">
-        <div class="tab active" onclick="showTab('log')">Log</div>
-        <div class="tab" onclick="showTab('map')">Map</div>
+    <h1>Mind on a Map</h1>
+    <div>
+        <button id="toggle-gps" class="toggle-button" onclick="toggleGPS()">
+            <img src="https://img.icons8.com/ios-filled/50/000000/marker.png" alt="GPS">
+            Location: Off
+        </button>
+        <button id="toggle-camera" class="toggle-button" onclick="toggleCamera()">
+            <img src="https://img.icons8.com/ios-filled/50/000000/camera.png" alt="Camera">
+            Camera: Off
+        </button>
     </div>
-
-    <div id="log" class="tab-content active">
-        <div class="toggle-container">
-            <div class="toggle-switch">
-                <input type="checkbox" id="toggle-gps" onchange="toggleGPS()">
-                <span class="slider"></span>
-            </div>
-            <span class="icon">📍</span>
-
-            <div class="toggle-switch">
-                <input type="checkbox" id="toggle-camera" onchange="toggleCamera()">
-                <span class="slider"></span>
-            </div>
-            <span class="icon">📷</span>
+    <div id="form">
+        <div class="field-title">My View</div>
+        <video id="camera-feed" autoplay playsinline></video>
+        <button id="capture-photo">Capture Photo</button>
+        <canvas id="photo-canvas" style="display:none;"></canvas>
+        <div class="field-title">How do I feel</div>
+        <div id="feeling-tags">
+            <span class="feeling-tag" data-feeling="excited" style="background-color: #b2fe92;">😃 Excited</span>
+            <span class="feeling-tag" data-feeling="curious" style="background-color: #aaffdd;">🤔 Curious</span>
+            <span class="feeling-tag" data-feeling="happy" style="background-color: #ecfa6f;">😊 Happy</span>
+            <span class="feeling-tag" data-feeling="overwhelmed" style="background-color: #fa9c9c;">😵 Overwhelmed</span>
+            <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
+            <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
         </div>
-        <div id="form">
-            <div class="field-title">My View</div>
-            <video id="camera-feed" autoplay playsinline></video>
-            <button id="capture-photo">Capture Photo</button>
-            <canvas id="photo-canvas" style="display:none;"></canvas>
-            <div class="field-title">How Do I Feel</div>
-            <div id="feeling-tags">
-                <span class="feeling-tag" data-feeling="excited" style="background-color: #b2fe92;">😃 Excited</span>
-                <span class="feeling-tag" data-feeling="curious" style="background-color: #aaffdd;">🤔 Curious</span>
-                <span class="feeling-tag" data-feeling="happy" style="background-color: #ecfa6f;">😊 Happy</span>
-                <span class="feeling-tag" data-feeling="overwhelmed" style="background-color: #fa9c9c;">😵 Overwhelmed</span>
-                <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
-                <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
-            </div>
-            <div class="field-title">Observations</div>
-            <textarea id="notes" placeholder="Enter your notes here"></textarea>
-            <button id="save-log" onclick="saveLog()">Save Log</button>
-            <button id="restart-logging" onclick="restartLogging()">Restart Logging</button>
-            <div id="save-confirmation">Log saved and marker added to the map!</div>
-        </div>
+        <div class="field-title">Observation</div>
+        <textarea id="notes" placeholder="Enter your observation here"></textarea>
+        <button id="save-log" onclick="saveLog()">Save Log</button>
+        <button id="restart-logging" onclick="restartLogging()">Restart Logging</button>
+        <div id="save-confirmation">Log saved and marker added to the map!</div>
     </div>
-
-    <div id="map" class="tab-content">
-        <div id="map"></div>
-        <div id="slider-container">
-            <input type="range" id="slider" min="0" max="0" step="1" value="0" oninput="updateSlider()">
-            <div id="slider-value"></div>
-        </div>
+    <div id="map"></div>
+    <div id="slider-container">
+        <input type="range" id="slider" min="0" max="0" step="1" value="0" oninput="updateSlider()">
+        <div id="slider-value"></div>
     </div>
 
     <div id="manual-log-form">
         <h3>Log a Feeling</h3>
-        <div class="field-title">How Do I Feel</div>
+        <div class="field-title">How do I feel</div>
         <div id="manual-feeling-tags">
             <span class="feeling-tag" data-feeling="excited" style="background-color: #b2fe92;">😃 Excited</span>
             <span class="feeling-tag" data-feeling="curious" style="background-color: #aaffdd;">🤔 Curious</span>
@@ -222,8 +151,8 @@
             <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
             <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
         </div>
-        <div class="field-title">Observations</div>
-        <textarea id="manual-notes" placeholder="Enter your notes here"></textarea>
+        <div class="field-title">Observation</div>
+        <textarea id="manual-notes" placeholder="Enter your observation here"></textarea>
         <div class="field-title">My View</div>
         <input type="file" id="manual-photo" accept="image/*">
         <button onclick="saveManualLog()">Save Log</button>
@@ -270,11 +199,12 @@
         function toggleGPS() {
             gpsEnabled = !gpsEnabled;
             const button = document.getElementById('toggle-gps');
+            button.textContent = gpsEnabled ? 'Location: On' : 'Location: Off';
             if (gpsEnabled) {
-                button.checked = true;
+                button.classList.remove('off');
                 requestLocation();
             } else {
-                button.checked = false;
+                button.classList.add('off');
                 if (watchId) {
                     navigator.geolocation.clearWatch(watchId);
                     watchId = null;
@@ -348,13 +278,15 @@
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
                 video.srcObject = null;
-                button.checked = false;
+                button.textContent = 'Camera: Off';
+                button.classList.add('off');
             } else {
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                     .then(s => {
                         stream = s;
                         video.srcObject = stream;
-                        button.checked = true;
+                        button.textContent = 'Camera: On';
+                        button.classList.remove('off');
                     })
                     .catch(error => {
                         console.error("Error accessing the camera:", error);
@@ -379,7 +311,7 @@
                 .then(s => {
                     stream = s;
                     video.srcObject = stream;
-                    document.getElementById('toggle-camera').checked = true;
+                    document.getElementById('toggle-camera').textContent = 'Camera: On';
                 })
                 .catch(error => {
                     console.error("Error accessing the camera:", error);
@@ -446,7 +378,7 @@
                 <div style="background-color: ${feelingColors[log.feeling]}; padding: 10px; border-radius: 5px;">
                     ${log.photo ? `<img src="${log.photo}" alt="Captured photo" style="max-width: 100px; max-height: 100px;"><br>` : ''}
                     <strong>Feeling:</strong> ${log.feeling}<br>
-                    <strong>Notes:</strong> ${log.notes}
+                    <strong>Observation:</strong> ${log.notes}
                 </div>
             `;
 
@@ -608,13 +540,6 @@
             currentInfoWindow.open(map, markers[value].marker);
 
             sliderValue.textContent = `Date: ${new Date(log.timestamp).toLocaleString()} - Feeling: ${log.feeling}`;
-        }
-
-        function showTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`.tab[onclick="showTab('${tab}')"]`).classList.add('active');
-            document.getElementById(tab).classList.add('active');
         }
 
         window.onload = initMap;
