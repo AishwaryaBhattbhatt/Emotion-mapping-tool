@@ -3,126 +3,597 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emotional Mapping Tool</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <title>Mind on a Map</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR3nhIW56taOqanoBa0I4nVJiiUvQylf4"></script>
     <style>
-        #map {
-            height: 80vh;
+        body {
+            font-family: 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0 20px;
+            text-align: center;
+        }
+        #map { height: 400px; margin-bottom: 20px; }
+        #form { margin-top: 20px; }
+        .field-title {
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+        #notes {
             width: 100%;
+            height: 100px;
         }
-        #input-form {
-            margin: 20px;
+        #camera-feed {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            background-color: #f0f0f0;
+            margin-bottom: 10px;
+            object-fit: cover;
         }
-        .marker-label {
-            background-color: white;
-            padding: 5px;
+        #capture-photo {
+            margin-bottom: 15px;
+        }
+        #save-log, #restart-logging {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            font-size: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
             border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #save-log:hover, #restart-logging:hover {
+            background-color: #0056b3;
+        }
+        .toggle-button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+        }
+        .toggle-button.off {
+            background-color: #d9534f;
+        }
+        .toggle-button img {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+        }
+        #manual-log-form {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        #manual-log-form input, #manual-log-form textarea {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .feeling-tag {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 5px;
+            border: 2px solid #ccc;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+        .feeling-tag.selected {
+            transform: scale(1.1);
+        }
+        #slider-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #slider {
+            width: 80%;
+        }
+        #slider-value {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        h1 {
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Emotional Mapping Tool</h1>
+    <h1>Mind on a Map</h1>
+    <div>
+        <button id="toggle-gps" class="toggle-button" onclick="toggleGPS()">
+            <img src="https://img.icons8.com/ios-filled/50/000000/marker.png" alt="GPS">
+            Location: Off
+        </button>
+        <button id="toggle-camera" class="toggle-button" onclick="toggleCamera()">
+            <img src="https://img.icons8.com/ios-filled/50/000000/camera.png" alt="Camera">
+            Camera: Off
+        </button>
+    </div>
+    <div id="form">
+        <div class="field-title">My View</div>
+        <video id="camera-feed" autoplay playsinline></video>
+        <button id="capture-photo">Capture Photo</button>
+        <canvas id="photo-canvas" style="display:none;"></canvas>
+        <div class="field-title">How do I feel</div>
+        <div id="feeling-tags">
+            <span class="feeling-tag" data-feeling="excited" style="background-color: #b2fe92;">😃 Excited</span>
+            <span class="feeling-tag" data-feeling="curious" style="background-color: #aaffdd;">🤔 Curious</span>
+            <span class="feeling-tag" data-feeling="happy" style="background-color: #ecfa6f;">😊 Happy</span>
+            <span class="feeling-tag" data-feeling="overwhelmed" style="background-color: #fa9c9c;">😵 Overwhelmed</span>
+            <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
+            <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
+        </div>
+        <div class="field-title">Observation</div>
+        <textarea id="notes" placeholder="Enter your observation here"></textarea>
+        <button id="save-log" onclick="saveLog()">Save Log</button>
+        <button id="restart-logging" onclick="restartLogging()">Restart Logging</button>
+        <div id="save-confirmation">Log saved and marker added to the map!</div>
+    </div>
     <div id="map"></div>
-    <div id="input-form">
-        <h2>Log Your Feelings</h2>
-        <form id="log-form">
-            <label for="feeling">Feeling:</label>
-            <select id="feeling" name="feeling">
-                <option value="happy">Happy</option>
-                <option value="curious">Curious</option>
-                <option value="excited">Excited</option>
-                <option value="overwhelmed">Overwhelmed</option>
-                <option value="annoyed">Annoyed</option>
-                <option value="sad">Sad</option>
-            </select><br>
-            <label for="notes">Notes (optional):</label><br>
-            <textarea id="notes" name="notes" rows="4" cols="50"></textarea><br>
-            <label for="photo">Photo (optional):</label>
-            <input type="file" id="photo" name="photo"><br>
-            <button type="button" onclick="saveLog()">Save Log</button>
-        </form>
+    <div id="slider-container">
+        <input type="range" id="slider" min="0" max="0" step="1" value="0" oninput="updateSlider()">
+        <div id="slider-value"></div>
     </div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <div id="manual-log-form">
+        <h3>Log a Feeling</h3>
+        <div class="field-title">How do I feel</div>
+        <div id="manual-feeling-tags">
+            <span class="feeling-tag" data-feeling="excited" style="background-color: #b2fe92;">😃 Excited</span>
+            <span class="feeling-tag" data-feeling="curious" style="background-color: #aaffdd;">🤔 Curious</span>
+            <span class="feeling-tag" data-feeling="happy" style="background-color: #ecfa6f;">😊 Happy</span>
+            <span class="feeling-tag" data-feeling="overwhelmed" style="background-color: #fa9c9c;">😵 Overwhelmed</span>
+            <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
+            <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
+        </div>
+        <div class="field-title">Observation</div>
+        <textarea id="manual-notes" placeholder="Enter your observation here"></textarea>
+        <div class="field-title">My View</div>
+        <input type="file" id="manual-photo" accept="image/*">
+        <button onclick="saveManualLog()">Save Log</button>
+        <button onclick="closeManualLogForm()">Cancel</button>
+    </div>
+
     <script>
-        const map = L.map('map').setView([43.6500, -79.3900], 14);
+        let map, currentPositionMarker, currentPositionCircle, geocoder;
+        let emotionLogs = JSON.parse(localStorage.getItem('emotionLogs')) || [];
+        let selectedFeeling = null;
+        let capturedPhoto = null;
+        let stream;
+        let gpsEnabled = false;
+        let watchId;
+        let manualLogPosition = null;
+        let markers = [];
+        let currentInfoWindow = null;
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-        }).addTo(map);
+        const feelingColors = {
+            excited: '#b2fe92',
+            curious: '#aaffdd',
+            happy: '#ecfa6f',
+            overwhelmed: '#fa9c9c',
+            annoyed: '#dd8afe',
+            sad: '#a4c0ff'
+        };
 
-        const bounds = [
-            [43.65239257152418, -79.4006624097942],
-            [43.64484424107835, -79.39790011173959],
-            [43.647341029368114, -79.38632111423954],
-            [43.65500497983337, -79.38908553746576]
-        ];
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 13,
+                center: { lat: 43.650795, lng: -79.398091 }
+            });
 
-        map.fitBounds(bounds);
+            geocoder = new google.maps.Geocoder();
 
-        function onLocationFound(e) {
-            const radius = e.accuracy / 2;
+            map.addListener('click', function(e) {
+                openManualLogForm(e.latLng);
+            });
 
-            const userMarker = L.marker(e.latlng).addTo(map)
-                .bindPopup("You are within " + radius + " meters from this point").openPopup();
+            initFeelingTags();
+            initCamera();
+            loadLogs();
+            initSlider();
+        }
 
-            L.circle(e.latlng, radius).addTo(map);
-
-            document.getElementById('log-form').onsubmit = function(event) {
-                event.preventDefault();
-
-                const feeling = document.getElementById('feeling').value;
-                const notes = document.getElementById('notes').value;
-                const photo = document.getElementById('photo').files[0];
-                
-                const log = {
-                    latitude: e.latlng.lat,
-                    longitude: e.latlng.lng,
-                    feeling,
-                    notes,
-                    photo: photo ? URL.createObjectURL(photo) : '',
-                    timestamp: new Date().toISOString()
-                };
-
-                localStorage.setItem(`log_${log.latitude}_${log.longitude}`, JSON.stringify(log));
-                alert('Log saved!');
-
-                const marker = L.marker([log.latitude, log.longitude]).addTo(map)
-                    .bindPopup(`<b>${log.feeling}</b><br>${log.notes}<br>${log.photo ? '<img src="' + log.photo + '" width="100px"/>' : ''}<br><small>${log.timestamp}</small>`);
-                
-                if (photo) {
-                    URL.revokeObjectURL(log.photo);
+        function toggleGPS() {
+            gpsEnabled = !gpsEnabled;
+            const button = document.getElementById('toggle-gps');
+            button.textContent = gpsEnabled ? 'Location: On' : 'Location: Off';
+            if (gpsEnabled) {
+                button.classList.remove('off');
+                requestLocation();
+            } else {
+                button.classList.add('off');
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
                 }
-            };
-        }
-
-        function onLocationError(e) {
-            alert(e.message);
-        }
-
-        map.on('locationfound', onLocationFound);
-        map.on('locationerror', onLocationError);
-
-        map.locate({setView: true, maxZoom: 16});
-
-        function loadLogs() {
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('log_')) {
-                    const log = JSON.parse(localStorage.getItem(key));
-                    const marker = L.marker([log.latitude, log.longitude]).addTo(map)
-                        .bindPopup(`<b>${log.feeling}</b><br>${log.notes}<br>${log.photo ? '<img src="' + log.photo + '" width="100px"/>' : ''}<br><small>${log.timestamp}</small>`);
-                    marker.on('mouseover', function (e) {
-                        this.openPopup();
-                    });
-                    marker.on('mouseout', function (e) {
-                        this.closePopup();
-                    });
+                if (currentPositionMarker) {
+                    currentPositionMarker.setMap(null);
+                    currentPositionMarker = null;
+                }
+                if (currentPositionCircle) {
+                    currentPositionCircle.setMap(null);
+                    currentPositionCircle = null;
                 }
             }
         }
 
-        window.onload = loadLogs;
+        function requestLocation() {
+            if ("geolocation" in navigator) {
+                watchId = navigator.geolocation.watchPosition(function(position) {
+                    const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                    map.setCenter(pos);
+                    if (currentPositionMarker) {
+                        currentPositionMarker.setPosition(pos);
+                    } else {
+                        currentPositionMarker = new google.maps.Marker({
+                            position: pos,
+                            map: map,
+                            title: 'Current Location',
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 10,
+                                fillColor: 'blue',
+                                fillOpacity: 1,
+                                strokeWeight: 2,
+                                strokeColor: 'white'
+                            }
+                        });
+                    }
+                    addCurrentPositionCircle(pos);
+                }, function(error) {
+                    console.error("Error: " + error.message);
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                });
+            } else {
+                console.log("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function addCurrentPositionCircle(position) {
+            if (currentPositionCircle) {
+                currentPositionCircle.setMap(null);
+            }
+            currentPositionCircle = new google.maps.Circle({
+                strokeColor: '#0000FF',
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: '#0000FF',
+                fillOpacity: 0.35,
+                map: map,
+                center: position,
+                radius: 5 // 5 meters radius
+            });
+        }
+
+        function toggleCamera() {
+            const button = document.getElementById('toggle-camera');
+            const video = document.getElementById('camera-feed');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                video.srcObject = null;
+                button.textContent = 'Camera: Off';
+                button.classList.add('off');
+            } else {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                    .then(s => {
+                        stream = s;
+                        video.srcObject = stream;
+                        button.textContent = 'Camera: On';
+                        button.classList.remove('off');
+                    })
+                    .catch(error => {
+                        console.error("Error accessing the camera:", error);
+                    });
+            }
+        }
+
+        function initFeelingTags() {
+            const tags = document.querySelectorAll('.feeling-tag');
+            tags.forEach(tag => {
+                tag.addEventListener('click', function() {
+                    tags.forEach(t => t.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedFeeling = this.dataset.feeling;
+                });
+            });
+        }
+
+        function initCamera() {
+            const video = document.getElementById('camera-feed');
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(s => {
+                    stream = s;
+                    video.srcObject = stream;
+                    document.getElementById('toggle-camera').textContent = 'Camera: On';
+                })
+                .catch(error => {
+                    console.error("Error accessing the camera:", error);
+                });
+
+            document.getElementById('capture-photo').addEventListener('click', function() {
+                const canvas = document.getElementById('photo-canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                capturedPhoto = canvas.toDataURL('image/jpeg');
+                video.pause();
+                video.style.backgroundImage = `url(${capturedPhoto})`;
+                video.style.backgroundSize = 'cover';
+                video.style.backgroundPosition = 'center';
+                video.style.display = 'block';
+                alert("Photo captured!");
+            });
+        }
+
+        function saveLog() {
+            if (!currentPositionMarker) {
+                alert("Unable to get your current location. Please try again.");
+                return;
+            }
+
+            if (!selectedFeeling) {
+                alert("Please select a feeling before saving.");
+                return;
+            }
+
+            const notes = document.getElementById('notes').value;
+            const position = currentPositionMarker.getPosition();
+
+            const log = {
+                position: { lat: position.lat(), lng: position.lng() },
+                feeling: selectedFeeling,
+                notes: notes,
+                photo: capturedPhoto,
+                timestamp: new Date().toISOString()
+            };
+
+            geocoder.geocode({ location: log.position }, (results, status) => {
+                if (status === 'OK') {
+                    if (results[0]) {
+                        log.address = results[0].formatted_address;
+                    } else {
+                        log.address = 'Unknown location';
+                    }
+                } else {
+                    log.address = 'Geocoder failed';
+                }
+
+                emotionLogs.push(log);
+                localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
+                addLogToMap(log);
+
+                document.getElementById('notes').value = '';
+                document.querySelectorAll('.feeling-tag').forEach(tag => tag.classList.remove('selected'));
+                selectedFeeling = null;
+                capturedPhoto = null;
+                restartCamera();
+
+                const saveConfirmation = document.getElementById('save-confirmation');
+                saveConfirmation.style.display = 'block';
+                setTimeout(() => {
+                    saveConfirmation.style.display = 'none';
+                }, 3000);
+
+                updateSlider();
+            });
+        }
+
+        function addLogToMap(log) {
+            const popupContent = `
+                <div style="background-color: ${feelingColors[log.feeling]}; padding: 10px; border-radius: 5px;">
+                    ${log.photo ? `<img src="${log.photo}" alt="Captured photo" style="max-width: 100px; max-height: 100px;"><br>` : ''}
+                    <strong>Feeling:</strong> ${log.feeling}<br>
+                    <strong>Observation:</strong> ${log.notes}<br>
+                    <strong>Location:</strong> ${log.address}
+                </div>
+            `;
+
+            const marker = new google.maps.Marker({
+                position: log.position,
+                map: map,
+                title: log.feeling,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: feelingColors[log.feeling],
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: 'white'
+                }
+            });
+
+            const infowindow = new google.maps.InfoWindow({
+                content: popupContent
+            });
+
+            marker.addListener('click', () => {
+                infowindow.open(map, marker);
+            });
+
+            markers.push({ marker, infowindow });
+        }
+
+        function loadLogs() {
+            emotionLogs.forEach(log => addLogToMap(log));
+        }
+
+        function restartCamera() {
+            const video = document.getElementById('camera-feed');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(s => {
+                    stream = s;
+                    video.srcObject = stream;
+                    video.play();
+                    video.style.backgroundImage = 'none';
+                })
+                .catch(error => {
+                    console.error("Error accessing the camera:", error);
+                });
+        }
+
+        function restartLogging() {
+            localStorage.removeItem('emotionLogs');
+            emotionLogs = [];
+            markers.forEach(({ marker }) => marker.setMap(null));
+            markers = [];
+            document.getElementById('slider').max = 0;
+            document.getElementById('slider').value = 0;
+            document.getElementById('slider-value').textContent = '';
+        }
+
+        function openManualLogForm(latLng) {
+            manualLogPosition = latLng;
+            document.getElementById('manual-log-form').style.display = 'block';
+        }
+
+        function closeManualLogForm() {
+            document.getElementById('manual-log-form').style.display = 'none';
+            manualLogPosition = null;
+        }
+
+        function saveManualLog() {
+            const feelingTags = document.querySelectorAll('#manual-feeling-tags .feeling-tag');
+            let manualSelectedFeeling = null;
+            feelingTags.forEach(tag => {
+                if (tag.classList.contains('selected')) {
+                    manualSelectedFeeling = tag.dataset.feeling;
+                }
+            });
+
+            if (!manualSelectedFeeling) {
+                alert("Please select a feeling before saving.");
+                return;
+            }
+
+            const notes = document.getElementById('manual-notes').value;
+            const photoInput = document.getElementById('manual-photo');
+            let photo = null;
+
+            if (photoInput.files && photoInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    photo = e.target.result;
+                    const log = {
+                        position: { lat: manualLogPosition.lat(), lng: manualLogPosition.lng() },
+                        feeling: manualSelectedFeeling,
+                        notes: notes,
+                        photo: photo,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    geocoder.geocode({ location: log.position }, (results, status) => {
+                        if (status === 'OK') {
+                            if (results[0]) {
+                                log.address = results[0].formatted_address;
+                            } else {
+                                log.address = 'Unknown location';
+                            }
+                        } else {
+                            log.address = 'Geocoder failed';
+                        }
+
+                        emotionLogs.push(log);
+                        localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
+                        addLogToMap(log);
+
+                        document.getElementById('manual-notes').value = '';
+                        photoInput.value = '';
+                        feelingTags.forEach(tag => tag.classList.remove('selected'));
+                        closeManualLogForm();
+
+                        updateSlider();
+                    });
+                };
+                reader.readAsDataURL(photoInput.files[0]);
+            } else {
+                const log = {
+                    position: { lat: manualLogPosition.lat(), lng: manualLogPosition.lng() },
+                    feeling: manualSelectedFeeling,
+                    notes: notes,
+                    photo: null, // No photo for manual logs if not uploaded
+                    timestamp: new Date().toISOString()
+                };
+
+                geocoder.geocode({ location: log.position }, (results, status) => {
+                    if (status === 'OK') {
+                        if (results[0]) {
+                            log.address = results[0].formatted_address;
+                        } else {
+                            log.address = 'Unknown location';
+                        }
+                    } else {
+                        log.address = 'Geocoder failed';
+                    }
+
+                    emotionLogs.push(log);
+                    localStorage.setItem('emotionLogs', JSON.stringify(emotionLogs));
+                    addLogToMap(log);
+
+                    document.getElementById('manual-notes').value = '';
+                    feelingTags.forEach(tag => tag.classList.remove('selected'));
+                    closeManualLogForm();
+
+                    updateSlider();
+                });
+            }
+        }
+
+        function initSlider() {
+            const slider = document.getElementById('slider');
+            slider.max = emotionLogs.length - 1;
+            slider.value = 0;
+            updateSlider();
+        }
+
+        function updateSlider() {
+            const slider = document.getElementById('slider');
+            const sliderValue = document.getElementById('slider-value');
+            const value = parseInt(slider.value);
+            slider.max = emotionLogs.length - 1;
+            if (emotionLogs.length === 0) {
+                sliderValue.textContent = '';
+                return;
+            }
+
+            if (currentInfoWindow) {
+                currentInfoWindow.close();
+            }
+
+            const log = emotionLogs[value];
+            map.setCenter(log.position);
+
+            currentInfoWindow = markers[value].infowindow;
+            currentInfoWindow.open(map, markers[value].marker);
+
+            sliderValue.textContent = `Date: ${new Date(log.timestamp).toLocaleString()} - Feeling: ${log.feeling}`;
+        }
+
+        window.onload = initMap;
     </script>
 </body>
 </html>
