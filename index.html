@@ -9,50 +9,85 @@
         body {
             font-family: 'Helvetica Neue', sans-serif;
             margin: 0;
-            padding: 0 20px;
+            padding: 0 5px;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
         }
-        #map { height: 400px; margin-bottom: 20px; }
-        #form { margin-top: 20px; }
+        h1 {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        #map { 
+            height: 40%; 
+            width: 100%;
+        }
+        #form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 60%;
+            overflow: auto;
+        }
         .field-title {
             font-weight: bold;
-            margin-top: 15px;
+            margin-top: 10px;
             margin-bottom: 5px;
+            font-size: 14px;
         }
         #notes {
-            width: 100%;
-            height: 100px;
+            width: 90%;
+            height: 60px;
+            font-size: 12px;
         }
         #camera-feed {
-            width: 100%;
-            max-width: 400px;
-            height: 300px;
+            width: 90%;
+            max-width: 300px;
+            height: 100px;
             background-color: #f0f0f0;
             margin-bottom: 10px;
             object-fit: cover;
         }
         #capture-photo {
-            margin-bottom: 15px;
+            margin-bottom: 5px;
+            font-size: 12px;
+            padding: 5px;
+        }
+        .feeling-tag {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 3px;
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+        .feeling-tag.selected {
+            transform: scale(1.1);
         }
         #save-log, #restart-logging {
             display: block;
-            width: 100%;
-            padding: 15px;
-            font-size: 20px;
+            width: 90%;
+            padding: 10px;
+            font-size: 14px;
             background-color: #007bff;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 5px;
         }
         #save-log:hover, #restart-logging:hover {
             background-color: #0056b3;
         }
         .toggle-button {
-            padding: 10px 20px;
+            padding: 5px 10px;
             margin: 5px;
-            font-size: 16px;
+            font-size: 14px;
             cursor: pointer;
             border: none;
             border-radius: 5px;
@@ -65,53 +100,20 @@
             background-color: #d9534f;
         }
         .toggle-button img {
-            width: 20px;
-            height: 20px;
-            margin-right: 8px;
-        }
-        #manual-log-form {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-        }
-        #manual-log-form input, #manual-log-form textarea {
-            width: 100%;
-            margin-bottom: 10px;
-            padding: 10px;
-            font-size: 16px;
-        }
-        .feeling-tag {
-            display: inline-block;
-            padding: 10px 15px;
-            margin: 5px;
-            border: 2px solid #ccc;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 18px;
-        }
-        .feeling-tag.selected {
-            transform: scale(1.1);
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
         }
         #slider-container {
-            margin-top: 20px;
+            margin-top: 5px;
             text-align: center;
         }
         #slider {
-            width: 80%;
+            width: 90%;
         }
         #slider-value {
-            font-size: 18px;
-            margin-top: 10px;
-        }
-        h1 {
-            margin-top: 20px;
+            font-size: 14px;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -151,25 +153,6 @@
     <div id="slider-container">
         <input type="range" id="slider" min="0" max="0" step="1" value="0" oninput="updateSlider()">
         <div id="slider-value"></div>
-    </div>
-
-    <div id="manual-log-form">
-        <h3>Log a Feeling</h3>
-        <div class="field-title">How do I feel</div>
-        <div id="manual-feeling-tags">
-            <span class="feeling-tag" data-feeling="excited" style="background-color: #b2fe92;">😃 Excited</span>
-            <span class="feeling-tag" data-feeling="curious" style="background-color: #aaffdd;">🤔 Curious</span>
-            <span class="feeling-tag" data-feeling="happy" style="background-color: #ecfa6f;">😊 Happy</span>
-            <span class="feeling-tag" data-feeling="overwhelmed" style="background-color: #fa9c9c;">😵 Overwhelmed</span>
-            <span class="feeling-tag" data-feeling="annoyed" style="background-color: #dd8afe;">😠 Annoyed</span>
-            <span class="feeling-tag" data-feeling="sad" style="background-color: #a4c0ff;">😢 Sad</span>
-        </div>
-        <div class="field-title">Observation</div>
-        <textarea id="manual-notes" placeholder="Enter your observation here"></textarea>
-        <div class="field-title">My View</div>
-        <input type="file" id="manual-photo" accept="image/*">
-        <button onclick="saveManualLog()">Save Log</button>
-        <button onclick="closeManualLogForm()">Cancel</button>
     </div>
 
     <script>
